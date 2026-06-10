@@ -1,0 +1,8 @@
+node_modules
+dist
+# .env (allowed for local Vite build variables)
+.git
+*.md
+memory-system-inspiration-docs
+backups/
+scripts/

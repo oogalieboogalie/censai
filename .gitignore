@@ -1,0 +1,19 @@
+node_modules
+dist
+dist-landing
+coverage/
+.env
+.google_tokens.json
+.homebase-state/
+.codex-run/
+.codex-runlogs/
+.codex-*.log
+/workspaces/
+
+# scratch / junk artifacts
+*.mess
+test-atlas-write*
+outputs-sandbox-resolver.cjs
+
+# local dev logs
+*.log
