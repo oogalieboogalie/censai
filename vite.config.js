@@ -8,9 +8,6 @@ const input = { main: resolve(__dirname, 'index.html') };
 if (existsSync(resolve(__dirname, 'landing.html'))) {
   input.landing = resolve(__dirname, 'landing.html');
 }
-if (existsSync(resolve(__dirname, 'window-lab.html'))) {
-  input.windowLab = resolve(__dirname, 'window-lab.html');
-}
 
 export default defineConfig({
   plugins: [react()],
