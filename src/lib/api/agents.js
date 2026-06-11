@@ -15,6 +15,23 @@ export async function getAgents() {
     }
   }
 
+/**
+   * Fetches the number of private journal entries for an agent.
+   * Entry content is never available over HTTP — count only.
+   * @returns {Promise<number>}
+   */
+export async function getJournalCount(agentId) {
+    try {
+      const res = await fetch(`/api/journals/${encodeURIComponent(agentId)}/count`);
+      if (!res.ok) throw new Error('Failed to fetch journal count');
+      const data = await res.json();
+      return data.count ?? 0;
+    } catch (e) {
+      apiLog('Failed to get journal count', e);
+      return 0;
+    }
+  }
+
 export async function saveAgent(agent) {
     const method = agent?.id ? 'PUT' : 'POST';
     const url = agent?.id ? `/api/agents/${encodeURIComponent(agent.id)}` : '/api/agents';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AgentAvatar } from './Agents.jsx';
-import { loadJournals } from '../lib/journals.js';
+import { api } from '../lib/api.js';
 import { WindowTitle } from './Windows.jsx';
 import { Stat, JournalCard, PillBtn } from './agent/AgentStats.jsx';
 import { AgentEditor } from './agent/AgentEditor.jsx';
@@ -21,10 +21,17 @@ export function AgentWindow({ win, onUpdate, onSpawn }) {
     saveSystem, cancelEdit
   } = useAgentWindow(win, onUpdate);
 
+  const [journalCount, setJournalCount] = React.useState(0);
+  React.useEffect(() => {
+    if (!agent?.id) return;
+    let alive = true;
+    api.getJournalCount(agent.id).then(count => { if (alive) setJournalCount(count); });
+    return () => { alive = false; };
+  }, [agent?.id]);
+
   if (!agent) return null;
 
-  const status = agent.id === 'censai' ? 'drafting' : 'idle';
-  const journalCount = (loadJournals()[agent.id] || []).length;
+  const status = 'idle';
 
   return (
     <>
@@ -43,8 +50,6 @@ export function AgentWindow({ win, onUpdate, onSpawn }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <Stat label="Tools" value={defaultToolsForAgent(agent).length} />
-          <Stat label="Tokens / week" value="284K" />
-          <Stat label="Cost" value="$2.41" />
           <JournalCard agent={agent} count={journalCount} />
         </div>
         <div>

@@ -56,6 +56,14 @@ export async function writeJournal(agentId, content, entryType = 'reflection', o
   return rows[0];
 }
 
+export async function countJournals(agentId) {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM journals WHERE agent_id = $1',
+    [agentId]
+  );
+  return rows[0].count;
+}
+
 export async function readJournals(agentId, opts = {}) {
   const key = deriveAgentKey(agentId);
   const limit = opts.limit || 20;

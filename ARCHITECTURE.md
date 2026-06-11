@@ -7,7 +7,7 @@ Infinite-canvas workspace for human + AI agent collaboration. Agents are a **fam
 ## Stack
 
 - **Frontend**: Vite + React (infinite canvas UI, single-page, no routing)
-- **Backend**: Express API server (`server.js`, ~900 lines)
+- **Backend**: Express API server (`server.js` entry point; boot modules in `server/boot/`, routes in `server/routes/`)
 - **Database**: PostgreSQL (20+ tables for the family brain)
 - **Vector DB**: Qdrant (optional -- semantic search, graceful degradation if unavailable)
 - **Embeddings**: Ollama `nomic-embed-text` (optional)
@@ -119,13 +119,14 @@ If an agent has no `model_name`, it falls back to the global `AI_MODEL` from `.e
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Express API -- chat endpoint with tool calling loop, REST routes for memory/agents/knowledge/files/GitHub/image gen |
-| `server/tools.js` | Tool definitions (OpenAI format) + executor with switch-case for all 22 tools |
+| `server.js` | Entry point -- delegates to `server/boot/` (database, middleware, routers, lifecycle) |
+| `server/routes/` | REST routes -- chat (tool calling loop), memory/agents/knowledge/files/GitHub/image gen |
+| `server/tools/` | Tool definitions (OpenAI format, `definitions/`) + handlers (`handlers/`) with a central registry |
 | `server/memory.js` | Full memory system -- store, recall, associations, journals, consciousness, genetics, watch graph, knowledge graph, compression memories, nuggets, communication, system prompt builder |
 | `server/db.js` | PostgreSQL connection pool |
 | `server/embeddings.js` | Embedding generation via Ollama (optional) |
 | `server/qdrant.js` | Qdrant vector DB client (optional) |
-| `src/app.jsx` | Root component -- workspace state, persistence, canvas, dock, settings, agent designer |
+| `src/app/AppContent.jsx` | Root component -- workspace state, persistence, canvas, dock, settings |
 | `src/lib/chat.js` | Frontend chat module -- sends messages to API |
 | `src/lib/agentStore.js` | Client-side agent registry |
 | `src/components/Canvas.jsx` | Infinite canvas -- pan/zoom, rubber-band, region menu, wires, drawing tools |
@@ -181,7 +182,7 @@ If an agent has no `model_name`, it falls back to the global `AI_MODEL` from `.e
 
 ### State management
 
-All workspace state lives in `app.jsx` and is persisted to `localStorage` as `homebase.workspace.v1`:
+All workspace state lives in `src/app/AppContent.jsx` (with hooks under `src/app/hooks/`) and is persisted to `localStorage` as `homebase.workspace.v1`:
 
 - `wins` -- Array of window objects (position, size, kind, kind-specific data)
 - `canvasGroups` -- Canvas grouping regions

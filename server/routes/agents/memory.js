@@ -6,6 +6,7 @@ import {
   loadAgentContext,
   writeJournal,
   readJournals,
+  countJournals,
   storeCompressionMemory,
 } from '../../memory.js';
 
@@ -58,13 +59,25 @@ memoryRouter.post('/journals/:agentId', requireDb, async (req, res) => {
   }
 });
 
+memoryRouter.get('/journals/:agentId/count', requireDb, async (req, res) => {
+  try {
+    const count = await countJournals(req.params.agentId);
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Journals are private to the agent: only the in-process tool loop may read
+// plaintext. Over HTTP, entry content is always redacted — the UI shows
+// metadata and counts only.
 memoryRouter.get('/journals/:agentId', requireDb, async (req, res) => {
   try {
     const entries = await readJournals(req.params.agentId, {
       limit: Number(req.query.limit) || 20,
       entryType: req.query.type || null,
     });
-    res.json(entries);
+    res.json(entries.map(entry => ({ ...entry, content: '[private]' })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
