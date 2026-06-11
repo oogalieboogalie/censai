@@ -15,5 +15,15 @@ export const FACTORY_WINDOW_MANIFESTS = [
     defaultSize: { w: 440, h: 300 },
     lab: {"title":"Hello Factory","props":{"note":"This window was added by creating one folder and running window:sync."}},
   },
+  {
+    kind: 'code3d',
+    canvasType: 'code3d',
+    label: 'Code in 3D',
+    componentName: 'Code3dWindow',
+    componentPath: 'src/components/windows/code3d/index.jsx',
+    defaultSize: { w: 680, h: 540 },
+    lab: {"title":"Code in 3D"},
+    launcher: {"show":true,"order":55,"icon":"Code","label":"Code in 3D","hint":"wire a window in → 3D"},
+  },
   // window:sync inserts new windows above this line — do not remove.
 ];
