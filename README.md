@@ -1,6 +1,6 @@
 # 🌌 Censai
 
-**An infinite-canvas workspace where humans and AI agents work side by side. Self-hosted, local-first, yours.**
+**The infinite canvas where your team and your AI agents work side by side — self-hosted, local-first, yours.**
 
 <div align="left">
 
