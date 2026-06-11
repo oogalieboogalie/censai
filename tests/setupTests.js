@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import { TextEncoder, TextDecoder } from 'util';
 
+// Deterministic secrets for tests so encrypted-journal modules can load
+// without requiring a real .env (e.g. in CI / clean checkouts).
+process.env.JOURNAL_SECRET ||= '0'.repeat(64);
+process.env.SESSION_SECRET ||= 'test-session-secret';
+
 // Mock canvas getContext which isn't present/functional in jsdom
 // We do this BEFORE other imports to catch top-level calls
 if (typeof HTMLCanvasElement !== 'undefined') {

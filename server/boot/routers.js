@@ -1,4 +1,4 @@
-import { calendarRouter } from '../routes/calendar.js';
+import { calendarRouter } from '../calendar.js';
 import { sheetsRouter } from '../sheets.js';
 import { youtubeRouter } from '../youtube.js';
 import { authRouter } from '../routes/auth.js';
