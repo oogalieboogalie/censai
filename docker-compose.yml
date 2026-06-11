@@ -3,9 +3,9 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: homebase
-      POSTGRES_PASSWORD: homebase
-      POSTGRES_DB: homebase
+      POSTGRES_USER: censai
+      POSTGRES_PASSWORD: censai
+      POSTGRES_DB: censai
     volumes:
       - pgdata18root:/var/lib/postgresql
       - ./docker/init.sql:/docker-entrypoint-initdb.d/001-init.sql
@@ -29,7 +29,7 @@ services:
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homebase"]
+      test: ["CMD-SHELL", "pg_isready -U censai"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -48,7 +48,7 @@ services:
       timeout: 3s
       retries: 5
 
-  homebase:
+  hub:
     build: .
     restart: unless-stopped
     logging:
@@ -61,10 +61,10 @@ services:
     ports:
       - "3002:3001"
     volumes:
-      - homebase_state:/app/.homebase-state
+      - censai_state:/app/.censai-state
       - .:/workspace/CensaiHub:ro
     environment:
-      DATABASE_URL: postgresql://homebase:homebase@postgres:5432/homebase
+      DATABASE_URL: postgresql://censai:censai@postgres:5432/censai
       QDRANT_URL: http://qdrant:6333
       AI_BASE_URL: http://host.docker.internal:11434/v1
       AI_API_KEY: ollama
@@ -82,8 +82,8 @@ services:
       NODE_ENV: production
       # Optional host<->container path mapping for the terminal/runner.
       # Set these if you mount a host project directory into the container.
-      # HOMEBASE_HOST_PROJECT_ROOT: /path/to/your/project
-      # HOMEBASE_CONTAINER_PROJECT_ROOT: /workspace/project
+      # CENSAI_HOST_PROJECT_ROOT: /path/to/your/project
+      # CENSAI_CONTAINER_PROJECT_ROOT: /workspace/project
       RUNNER_ENABLED: "true"
       RUNNER_URL: http://runner:3003
     depends_on:
@@ -105,10 +105,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace/CensaiHub
-    ports:
-      - "3003:3003"
+    # Port 3003 is intentionally NOT published to the host.
+    # The hub container reaches the runner via Docker's internal network (runner:3003).
+    # Exposing this port externally would make an arbitrary-execution service
+    # reachable on the host network.
 
 volumes:
   pgdata18root:
   qdrant_data:
-  homebase_state:
+  censai_state:

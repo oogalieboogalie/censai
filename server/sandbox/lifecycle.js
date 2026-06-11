@@ -54,8 +54,8 @@ export async function ensureSandbox(hostPath, options = {}) {
       '--name', name,
       '-w', WORKDIR,
       '-v', `${src}:${WORKDIR}`,
-      '--label', 'homebase.sandbox=1',
-      '--label', `homebase.hostPath=${src}`,
+      '--label', 'censai.sandbox=1',
+      '--label', `censai.hostPath=${src}`,
     ];
     if (options.network === false) runArgs.push('--network', 'none');
     runArgs.push(SANDBOX_IMAGE, ...KEEPALIVE);
@@ -89,7 +89,7 @@ export async function listSandboxes() {
   try {
     const { stdout, code } = await runnerClient.exec(
       'docker',
-      ['ps', '-a', '--filter', 'label=homebase.sandbox=1', '--format', '{{.Names}}\t{{.Status}}\t{{.Label "homebase.hostPath"}}'],
+      ['ps', '-a', '--filter', 'label=censai.sandbox=1', '--format', '{{.Names}}\t{{.Status}}\t{{.Label "censai.hostPath"}}'],
       { windowsHide: true }
     );
     if (code !== 0) return [];

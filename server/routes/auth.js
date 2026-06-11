@@ -8,7 +8,7 @@ import crypto from 'crypto';
 export const authRouter = express.Router();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOCAL_STATE_DIR = path.resolve(path.join(__dirname, '..', '..', '.homebase-state'));
+const LOCAL_STATE_DIR = path.resolve(path.join(__dirname, '..', '..', process.env.CENSAI_STATE_DIR || '.censai-state'));
 const GOOGLE_TOKENS_PATH = process.env.GOOGLE_TOKENS_PATH || path.join(LOCAL_STATE_DIR, 'google_tokens.json');
 const APP_ORIGIN = process.env.APP_ORIGIN || 'http://localhost:5173';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback';

@@ -1,8 +1,22 @@
 import React from 'react';
 import { getAgents, getAgentById } from '../../lib/agentStore.js';
 import { sendMessageWithMeta } from '../../lib/chat.js';
-import { scriptedReply, replyDelayMs } from '../../data/landing-chat-script.js';
 import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
+
+function scriptedReply(userText) {
+  const text = String(userText || '').toLowerCase();
+  if (text.includes('docker') || text.includes('self-host')) {
+    return 'Censai runs as a Docker Compose stack with Postgres, optional Qdrant memory, and an optional runner for execution-heavy work.';
+  }
+  if (text.includes('agent') || text.includes('memory')) {
+    return 'Agents can keep weighted memories, private encrypted journals, knowledge graph notes, and tool permissions across sessions.';
+  }
+  return 'Censai turns multi-agent work into a visual canvas where you can chat, assign tasks, browse files, and keep the workspace state together.';
+}
+
+function replyDelayMs() {
+  return 450;
+}
 
 export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, isActive }) {
   const agents = getAgents();
@@ -100,7 +114,7 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
         ...payloadMsgs.slice(0, -1),
         {
           from: 'system',
-          text: `[SYSTEM CONTEXT] Current Homebase project is "${currentProject.name}" at ${currentProject.path}. Use project tools with project: "${currentProject.name}" when reading, editing, testing, or assigning work. Treat this as the opened workspace folder, like a coding assistant launched in that directory.`,
+          text: `[SYSTEM CONTEXT] Current Censai project is "${currentProject.name}" at ${currentProject.path}. Use project tools with project: "${currentProject.name}" when reading, editing, testing, or assigning work. Treat this as the opened workspace folder, like a coding assistant launched in that directory.`,
         },
         payloadMsgs[payloadMsgs.length - 1],
       ];

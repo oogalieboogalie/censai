@@ -6,7 +6,7 @@ describe('Jules task sync mapping', () => {
       session: 'sessions/abc',
       julesStatus: 'COMPLETED',
       prNumber: 42,
-      prUrl: 'https://github.com/oogalieboogalie/Homebase/pull/42',
+      prUrl: 'https://github.com/censai-systems/censai/pull/42',
       prState: 'open',
     });
 
@@ -14,7 +14,7 @@ describe('Jules task sync mapping', () => {
       status: 'in_progress',
       error: null,
     }));
-    expect(patch.result).toContain('PR: https://github.com/oogalieboogalie/Homebase/pull/42');
+    expect(patch.result).toContain('PR: https://github.com/censai-systems/censai/pull/42');
     expect(patch.result).toContain('PR state: open');
   });
 
@@ -22,7 +22,7 @@ describe('Jules task sync mapping', () => {
     const patch = deriveAgentTaskPatch({
       session: 'sessions/abc',
       julesStatus: 'COMPLETED',
-      prUrl: 'https://github.com/oogalieboogalie/Homebase/pull/42',
+      prUrl: 'https://github.com/censai-systems/censai/pull/42',
       prState: 'open',
       reviewState: 'CHANGES_REQUESTED',
       reviewAuthor: 'reviewer',
@@ -39,7 +39,7 @@ describe('Jules task sync mapping', () => {
     const patch = deriveAgentTaskPatch({
       session: 'sessions/abc',
       julesStatus: 'COMPLETED',
-      prUrl: 'https://github.com/oogalieboogalie/Homebase/pull/42',
+      prUrl: 'https://github.com/censai-systems/censai/pull/42',
       prState: 'merged',
       reviewState: 'APPROVED',
       mergedAt: '2026-06-06T20:00:00.000Z',
@@ -56,7 +56,7 @@ describe('Jules task sync mapping', () => {
     const patch = deriveAgentTaskPatch({
       session: 'sessions/abc',
       julesStatus: 'COMPLETED',
-      prUrl: 'https://github.com/oogalieboogalie/Homebase/pull/42',
+      prUrl: 'https://github.com/censai-systems/censai/pull/42',
       prState: 'closed',
     });
 

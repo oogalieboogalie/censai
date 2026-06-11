@@ -29,7 +29,7 @@ function bytesEnv(name, fallback) {
 
 export const LOG_CONFIG = Object.freeze({
   fileEnabled: boolEnv('LOG_FILE_ENABLED', true),
-  dir: path.resolve(REPO_ROOT, process.env.LOG_DIR || '.homebase-state/logs'),
+  dir: path.resolve(REPO_ROOT, process.env.LOG_DIR || path.join(process.env.CENSAI_STATE_DIR || '.censai-state', 'logs')),
   retentionDays: intEnv('LOG_RETENTION_DAYS', 14),
   maxBytes: bytesEnv('LOG_MAX_BYTES', 100 * 1024 * 1024),
   cleanupIntervalMs: intEnv('LOG_CLEANUP_INTERVAL_HOURS', 24) * 60 * 60 * 1000,
@@ -37,7 +37,7 @@ export const LOG_CONFIG = Object.freeze({
 
 export function getLogFilePath(date = new Date()) {
   const yyyyMmDd = date.toISOString().slice(0, 10);
-  return path.join(LOG_CONFIG.dir, `homebase-${yyyyMmDd}.jsonl`);
+  return path.join(LOG_CONFIG.dir, `censai-${yyyyMmDd}.jsonl`);
 }
 
 async function listLogFiles(dir = LOG_CONFIG.dir) {

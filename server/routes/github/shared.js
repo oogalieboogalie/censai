@@ -17,7 +17,7 @@ export async function fetchGithub(endpoint, res) {
       headers: {
         'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Homebase-App'
+        'User-Agent': 'Censai-App'
       }
     });
     if (!r.ok) {
@@ -37,7 +37,7 @@ export async function getGithubDefaultBranch(repo, token) {
   if (cached) return cached;
 
   const repoRes = await fetch(`https://api.github.com/repos/${repo}`, {
-    headers: token ? { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-App' } : { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-App' }
+    headers: token ? { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-App' } : { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-App' }
   });
   if (!repoRes.ok) {
     const errText = await repoRes.text();

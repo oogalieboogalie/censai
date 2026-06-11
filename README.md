@@ -5,9 +5,9 @@
 <div align="left">
 
 [![License: BUSL 1.1](https://img.shields.io/badge/License-BUSL%201.1-orange.svg)](LICENSE)
-[![CI](https://github.com/oogalieboogalie/censai/actions/workflows/ci.yml/badge.svg)](https://github.com/oogalieboogalie/censai/actions/workflows/ci.yml)
+[![CI](https://github.com/censai-systems/censai/actions/workflows/ci.yml/badge.svg)](https://github.com/censai-systems/censai/actions/workflows/ci.yml)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-blue.svg?logo=docker&logoColor=white)](https://www.docker.com)
-[![GitHub stars](https://img.shields.io/github/stars/oogalieboogalie/censai?style=social)](https://github.com/oogalieboogalie/censai/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/censai-systems/censai?style=social)](https://github.com/censai-systems/censai/stargazers)
 
 </div>
 
@@ -21,7 +21,10 @@ Censai turns multi-agent work into a visual sandbox instead of a chat log. Drag 
 
 It ships as a blank canvas — no pre-seeded branding, no opinionated structure. You design the personalities, connect the tools, and set the parameters.
 
-![Censai Canvas Preview](public/preview.png)
+<div align="center">
+  <img src="public/preview.png" alt="Censai Canvas — agent workspace" width="49%" />
+  <img src="public/preview2.png" alt="Censai Canvas — file browser, docker-compose, terminal and task board" width="49%" />
+</div>
 
 ---
 
@@ -50,7 +53,7 @@ An agent task queue and a cron scheduler run server-side — agents keep working
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/oogalieboogalie/censai.git
+git clone https://github.com/censai-systems/censai.git
 cd censai
 ```
 

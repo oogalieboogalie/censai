@@ -13,7 +13,7 @@ async function fetchGithub(endpoint, options = {}) {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'Homebase-Agent',
+      'User-Agent': 'Censai-Agent',
       ...(needsContentType ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },

@@ -6,7 +6,7 @@ import { createLogger } from '../logger.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const log = createLogger('sandbox-images');
 
-export const SANDBOX_IMAGE = process.env.HOMEBASE_SANDBOX_IMAGE || 'homebase-sandbox:latest';
+export const SANDBOX_IMAGE = process.env.CENSAI_SANDBOX_IMAGE || 'censai-sandbox:latest';
 const SANDBOX_DOCKERFILE = path.resolve(__dirname, '..', '..', 'docker', 'sandbox.Dockerfile');
 const SANDBOX_DOCKERFILE_DIR = path.resolve(__dirname, '..', '..');
 const DEFAULT_MAX_BUFFER = 10 * 1024 * 1024;
@@ -28,7 +28,7 @@ export async function ensureSandboxImage() {
 
   imageEnsurePromise = (async () => {
     const done = log.startTimer();
-    if (SANDBOX_IMAGE === 'homebase-sandbox:latest') {
+    if (SANDBOX_IMAGE === 'censai-sandbox:latest') {
       log.info('building sandbox image', { image: SANDBOX_IMAGE });
       const { code, stderr } = await runnerClient.exec(
         'docker',

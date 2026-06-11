@@ -21,7 +21,7 @@ export async function fetchGitHubPullRequestState({ repo, prNumber, token }) {
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github.v3+json',
-    'User-Agent': 'Homebase-Agent',
+    'User-Agent': 'Censai-Agent',
   };
 
   const [prRes, reviewsRes] = await Promise.all([

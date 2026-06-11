@@ -11,7 +11,7 @@ export function scoreHandoffSubAgent(sub, currentProject, cleanText) {
 
   if (sub.project_id && currentProject?.name && sub.project_id === currentProject.name) score += 25;
   if (sub.project_id && currentProject?.id && sub.project_id === currentProject.id) score += 25;
-  if (sub.project_id && /homebase|censaihub/i.test(`${currentProject?.name || ''} ${currentProject?.path || ''}`) && /homebase|censaihub/i.test(sub.project_id)) score += 15;
+  if (sub.project_id && /censai/i.test(`${currentProject?.name || ''} ${currentProject?.path || ''}`) && /censai/i.test(sub.project_id)) score += 15;
 
   if (haystack.includes('jules-submitter') || haystack.includes('jules submitter')) score += 70;
   if (haystack.includes('jules')) score += 25;

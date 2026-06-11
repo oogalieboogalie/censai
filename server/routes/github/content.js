@@ -60,7 +60,7 @@ export async function writeFile(req, res) {
     try {
       const existingUrl = `https://api.github.com/repos/${repo}/contents/${encodeURI(filePath)}`;
       const existingRes = await fetch(existingUrl, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-Agent' }
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-Agent' }
       });
       if (existingRes.ok) {
         const existingData = await existingRes.json();
@@ -69,7 +69,7 @@ export async function writeFile(req, res) {
     } catch {}
 
     const body = {
-      message: message || `Add ${filePath.split('/').pop()} via Homebase`,
+      message: message || `Add ${filePath.split('/').pop()} via Censai`,
       content: content,
     };
     if (sha) body.sha = sha;
@@ -81,7 +81,7 @@ export async function writeFile(req, res) {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
-        'User-Agent': 'Homebase-Agent'
+        'User-Agent': 'Censai-Agent'
       },
       body: JSON.stringify(body)
     });

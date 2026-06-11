@@ -1,5 +1,5 @@
 export function getRuntimeMode() {
-  return process.env.HOMEBASE_MODE || (
+  return process.env.CENSAI_MODE || (
     process.env.NODE_ENV === 'production' ? 'cloud_saas' : 'local_desktop'
   );
 }
@@ -14,9 +14,9 @@ export function requireLocalFilesystem(req, res, next) {
     });
   }
 
-  if (mode === 'private_server' && process.env.HOMEBASE_ALLOW_LOCAL_FILES !== 'true') {
+  if (mode === 'private_server' && process.env.CENSAI_ALLOW_LOCAL_FILES !== 'true') {
     return res.status(403).json({
-      error: 'Local filesystem access requires HOMEBASE_ALLOW_LOCAL_FILES=true',
+      error: 'Local filesystem access requires CENSAI_ALLOW_LOCAL_FILES=true',
       mode,
     });
   }

@@ -80,7 +80,7 @@ export async function tickJulesWatcher() {
 
             const res = await fetch(
               `https://api.github.com/repos/${project.repo}/pulls/${db.pr_number}/reviews`,
-              { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-Agent' } }
+              { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3+json', 'User-Agent': 'Censai-Agent' } }
             );
             if (res.ok) {
               const reviews = await res.json();

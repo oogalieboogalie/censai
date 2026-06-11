@@ -41,7 +41,7 @@ async function embedWithCohere(text, inputType) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
-      'X-Client-Name': 'homebase',
+      'X-Client-Name': 'censai',
     },
     body: JSON.stringify(body),
   });

@@ -1,13 +1,13 @@
-# Homebase Frontend Architecture Reference
+# Censai Frontend Architecture Reference
 
-This document describes the active entry points and window rendering flows in the Homebase frontend application.
+This document describes the active entry points and window rendering flows in the Censai frontend application.
 
 ## Active Entry Point & Layout
 
-1. **Active Frontend Entry**: [src/app.jsx](file:///c:/Censai_Systems/Censai-Hub/src/app.jsx)
-   - Imports [src/app/AppContent.jsx](file:///c:/Censai_Systems/Censai-Hub/src/app/AppContent.jsx) which contains the main React workspace store integration, the toolbar, the dock, and the canvas.
+1. **Active Frontend Entry**: [`src/app.jsx`](../src/app.jsx)
+   - Imports [`src/app/AppContent.jsx`](../src/app/AppContent.jsx) which contains the main React workspace store integration, the toolbar, the dock, and the canvas.
 
-2. **Active Canvas Layout**: [src/components/Canvas.jsx](file:///c:/Censai_Systems/Censai-Hub/src/components/Canvas.jsx)
+2. **Active Canvas Layout**: [`src/components/Canvas.jsx`](../src/components/Canvas.jsx)
    - Renders the infinite grid, zoom controls, selection zones, and layers of windows.
 
 ## Window Spawning & Rendering Flow
@@ -26,9 +26,9 @@ App (src/app.jsx)
 
 1. **`AppContent`** calls `spawnAt(kind, props, pos, size)` which sets up default window sizes via `src/lib/windowRegistry.js`.
 2. **`Canvas`** delegates window rendering to **`CanvasFloatingWindows`**, **`CanvasMaximizedWindows`**, or **`CanvasPinnedWindows`**.
-3. These window layers wrap each window in **`WindowFrame`** (defined in [src/components/Windows.jsx](file:///c:/Censai_Systems/Censai-Hub/src/components/Windows.jsx)).
-4. **`WindowFrame`** looks up the React component in **`WINDOW_TYPES`** (exported from [src/components/windows/windowRegistry.js](file:///c:/Censai_Systems/Censai-Hub/src/components/windows/windowRegistry.js)).
-5. The component is instantiated (e.g. **`DocWindow`** from [src/components/DocWindow.jsx](file:///c:/Censai_Systems/Censai-Hub/src/components/DocWindow.jsx)).
+3. These window layers wrap each window in **`WindowFrame`** (defined in [`src/components/Windows.jsx`](../src/components/Windows.jsx)).
+4. **`WindowFrame`** looks up the React component in **`WINDOW_TYPES`** (exported from [`src/components/windows/windowRegistry.js`](../src/components/windows/windowRegistry.js)).
+5. The component is instantiated (e.g. **`DocWindow`** from [`src/components/DocWindow.jsx`](../src/components/DocWindow.jsx)).
 
 ---
 
@@ -36,7 +36,7 @@ App (src/app.jsx)
 
 > [!WARNING]
 > Stale versions of the canvas and document windows previously existed at root paths. They have been moved to `docs/legacy/` to prevent agents from mistakenly editing inactive code:
-> - `docs/legacy/canvas.jsx` (replaced by [src/components/Canvas.jsx](file:///c:/Censai_Systems/Censai-Hub/src/components/Canvas.jsx))
-> - `docs/legacy/doc-window.jsx` (replaced by [src/components/DocWindow.jsx](file:///c:/Censai_Systems/Censai-Hub/src/components/DocWindow.jsx))
+> - `docs/legacy/canvas.jsx` (replaced by [`src/components/Canvas.jsx`](../src/components/Canvas.jsx))
+> - `docs/legacy/doc-window.jsx` (replaced by [`src/components/DocWindow.jsx`](../src/components/DocWindow.jsx))
 >
 > **Do not edit files under `docs/legacy/`.** Always patch the active files in `src/components/`.

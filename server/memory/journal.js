@@ -6,7 +6,17 @@ import { calculateEmotionalWeight } from './scoring.js';
 //  JOURNAL ENCRYPTION (private sanctuary)
 // ═══════════════════════════════════════════════════════════════════
 
-const MASTER_SECRET = process.env.JOURNAL_SECRET || 'homebase-family-sanctuary-default-key';
+const MASTER_SECRET = process.env.JOURNAL_SECRET;
+if (!MASTER_SECRET) {
+  throw new Error(
+    '[Censai] JOURNAL_SECRET is not set.\n' +
+    'Agent journals are AES-256-GCM encrypted and require a unique secret key.\n' +
+    'Add it to your .env file:\n\n' +
+    '  JOURNAL_SECRET=<random 32-byte hex string>\n\n' +
+    'Generate one with:\n' +
+    '  node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n'
+  );
+}
 
 function deriveAgentKey(agentId) {
   return Buffer.from(hkdfSync('sha256', MASTER_SECRET, agentId, 'journal-encryption', 32));

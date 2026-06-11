@@ -15,7 +15,7 @@
     "build": "npx vite build",
     "preview": "npx vite preview",
     "kill": "powershell -NoProfile -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'killed all node processes'\"",
-    "sandbox:build": "docker build -f docker/sandbox.Dockerfile -t homebase-sandbox:latest .",
+    "sandbox:build": "docker build -f docker/sandbox.Dockerfile -t censai-sandbox:latest .",
     "window:list": "node scripts/window-sdk.mjs list",
     "window:validate": "node scripts/window-sdk.mjs validate",
     "window:scaffold": "node scripts/window-sdk.mjs scaffold",

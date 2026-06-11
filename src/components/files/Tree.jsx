@@ -63,7 +63,7 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
     setDropTarget(false);
     setDropping(true);
 
-    const imageData = e.dataTransfer.getData('application/x-homebase-image');
+    const imageData = e.dataTransfer.getData('application/x-censai-image');
     if (!imageData) {
       setDropping(false);
       return;

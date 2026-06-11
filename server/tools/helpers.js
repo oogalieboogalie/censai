@@ -6,7 +6,7 @@ import { getProject, getProjectByName, getProjectByRepoOrPath, listProjects, ope
 import { getSecret } from '../secrets.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CURRENT_PROJECT_FILE = path.resolve(path.join(__dirname, '..', '..', '.homebase-state', 'current-project.json'));
+const CURRENT_PROJECT_FILE = path.resolve(path.join(__dirname, '..', '..', process.env.CENSAI_STATE_DIR || '.censai-state', 'current-project.json'));
 
 async function readCurrentProjectState() {
   try {
@@ -42,7 +42,7 @@ async function maybeOpenCurrentProject(agentId, projectName) {
     existingPath: current.path,
     summary: current.scopeLabel
       ? `Canvas scoped project: ${current.scopeLabel}`
-      : 'Current Homebase project',
+      : 'Current Censai project',
   });
 }
 
@@ -121,7 +121,7 @@ export async function fetchGithub(endpoint, options = {}) {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'Homebase-Agent',
+      'User-Agent': 'Censai-Agent',
       ...(needsContentType ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {})
     }

@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  JULES SESSIONS
---  Tracks Jules tasks submitted by Homebase agents so we can poll,
+--  Tracks Jules tasks submitted by Censai agents so we can poll,
 --  link to PRs, and watch the Codex review loop.
 -- ═══════════════════════════════════════════════════════════════════
 

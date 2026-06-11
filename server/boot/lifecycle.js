@@ -18,7 +18,7 @@ export async function startServer(app, options = {}) {
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {
-      log.info('Homebase API server started', {
+      log.info('Censai API server started', {
         url: `http://localhost:${port}`,
         mode: getRuntimeMode(),
       });

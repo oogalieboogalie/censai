@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../lib/store.js';
 import { Icon } from './Icons.jsx';
 import { api } from '../lib/api.js';
 
-const THEME_KEY = 'homebase.theme.v1';
+const THEME_KEY = 'censai.theme.v1';
 export const DEFAULT_THEME = { hue: 145, chroma: 0.11, lightness: 0.62, mood: 'cream', customVars: {}, gridSnapping: true, borderWidth: 1, fontScale: 1.0 };
 const THEME_VAR_DEFAULTS = {
   '--window-bg': 'var(--surface)',

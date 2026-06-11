@@ -45,7 +45,7 @@ const ADAPTERS = {
       const res = await fetch('https://api.github.com/user', {
         headers: {
           Authorization: `Bearer ${token}`,
-          'User-Agent': 'Homebase-Agent',
+          'User-Agent': 'Censai-Agent',
           Accept: 'application/vnd.github.v3+json',
         },
       });

@@ -2,7 +2,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 export const WORKDIR = '/workspace';
-export const CONTAINER_PREFIX = 'homebase-sbx-';
+export const CONTAINER_PREFIX = 'censai-sbx-';
 
 export function sandboxNameForPath(hostPath) {
   const normalized = path.resolve(hostPath).replace(/[\\/]+$/, '').toLowerCase();

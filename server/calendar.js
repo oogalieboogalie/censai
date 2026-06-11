@@ -6,7 +6,7 @@ export const calendarRouter = express.Router();
 import fs from 'fs';
 import path from 'path';
 
-const TOKEN_PATH = process.env.GOOGLE_TOKENS_PATH || path.resolve('.homebase-state', 'google_tokens.json');
+const TOKEN_PATH = process.env.GOOGLE_TOKENS_PATH || path.resolve(process.env.CENSAI_STATE_DIR || '.censai-state', 'google_tokens.json');
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback';
 
 export function getOAuthClient() {

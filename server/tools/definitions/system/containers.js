@@ -9,7 +9,7 @@ export const containerTools = [
     type: 'function',
     function: {
       name: 'container_status',
-      description: 'Check the status of all Docker Compose services in the Homebase stack. Returns service name, running state, health, and exposed ports.',
+      description: 'Check the status of all Docker Compose services in the Censai stack. Returns service name, running state, health, and exposed ports.',
       parameters: {
         type: 'object',
         properties: {},
@@ -26,14 +26,14 @@ export const containerTools = [
     type: 'function',
     function: {
       name: 'container_logs',
-      description: 'Fetch recent logs from a Docker Compose service. Defaults to the homebase app service.',
+      description: 'Fetch recent logs from a Docker Compose service. Defaults to the hub app service.',
       parameters: {
         type: 'object',
         properties: {
           service: {
             type: 'string',
-            default: 'homebase',
-            description: 'Service name to fetch logs from (default: homebase)',
+            default: 'hub',
+            description: 'Service name to fetch logs from (default: hub)',
           },
           lines: {
             type: 'integer',
@@ -54,14 +54,14 @@ export const containerTools = [
     type: 'function',
     function: {
       name: 'restart_service',
-      description: 'Restart a Docker Compose service. Use with caution — this will briefly interrupt traffic. Defaults to homebase service.',
+      description: 'Restart a Docker Compose service. Use with caution — this will briefly interrupt traffic. Defaults to the hub service.',
       parameters: {
         type: 'object',
         properties: {
           service: {
             type: 'string',
-            default: 'homebase',
-            description: 'Service name to restart (default: homebase)',
+            default: 'hub',
+            description: 'Service name to restart (default: hub)',
           },
         },
       },

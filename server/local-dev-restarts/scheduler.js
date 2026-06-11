@@ -3,11 +3,11 @@ import fs from 'fs';
 import path from 'path';
 
 export function scheduleLocalDevRestart({ id, cwd, noticeSeconds = 5, port = 3001 }) {
-  const databaseUrl = process.env.DATABASE_URL || 'postgresql://homebase:homebase@127.0.0.1:5433/homebase';
+  const databaseUrl = process.env.DATABASE_URL || 'postgresql://censai:censai@127.0.0.1:5433/censai';
   const safeCwd = cwd.replace(/'/g, "''");
   const escapedCwd = cwd.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
-  const logPath = `${process.env.TEMP || cwd}\\homebase-codex-dev.log`;
-  const runnerLogPath = `${process.env.TEMP || cwd}\\homebase-local-dev-restart.log`;
+  const logPath = `${process.env.TEMP || cwd}\\censai-codex-dev.log`;
+  const runnerLogPath = `${process.env.TEMP || cwd}\\censai-local-dev-restart.log`;
   const timeZone = (process.env.LOCAL_DEV_TIME_ZONE || 'America/Chicago').replace(/'/g, "''");
   const hasDockerCompose = fs.existsSync(path.join(cwd, 'docker-compose.yml'));
 
@@ -74,9 +74,9 @@ Start-Sleep -Seconds ${Math.max(0, Number(noticeSeconds) || 0)}
 Update-RestartStatus 'restarting' ''
 
 if (${hasDockerCompose ? '$true' : '$false'}) {
-  docker compose up -d --build postgres qdrant homebase >> $runnerLog 2>&1
+  docker compose up -d --build postgres qdrant hub >> $runnerLog 2>&1
   if ($LASTEXITCODE -ne 0) {
-    Update-RestartStatus 'failed' 'Docker Compose stack restart failed. Check homebase-local-dev-restart.log.'
+    Update-RestartStatus 'failed' 'Docker Compose stack restart failed. Check censai-local-dev-restart.log.'
     exit 1
   }
   "[$(Get-Date -Format o)] Started Docker Compose stack" | Out-File -FilePath $runnerLog -Append -Encoding utf8
@@ -102,7 +102,7 @@ $healthy = $false
 $healthUrls = @("http://127.0.0.1:${port}/api/health")
 if (${hasDockerCompose ? '$true' : '$false'}) {
   try {
-    $published = docker compose port homebase 3001 2>$null
+    $published = docker compose port hub 3001 2>$null
     if ($published -match ':(\\d+)$') {
       $healthUrls += "http://127.0.0.1:$($matches[1])/api/health"
     }
@@ -127,7 +127,7 @@ if ($healthy) {
 }
 `;
 
-  const runnerDir = path.join(cwd, '.homebase-state', 'restart-runners');
+  const runnerDir = path.join(cwd, process.env.CENSAI_STATE_DIR || '.censai-state', 'restart-runners');
   fs.mkdirSync(runnerDir, { recursive: true });
   const runnerPath = path.join(runnerDir, `${id}.ps1`);
   fs.writeFileSync(runnerPath, script, 'utf8');

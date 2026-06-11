@@ -6,14 +6,14 @@ import { fileURLToPath } from 'url';
 export const clientStateRouter = express.Router();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOCAL_STATE_DIR = path.resolve(path.join(__dirname, '..', '..', '..', '.homebase-state'));
+const LOCAL_STATE_DIR = path.resolve(path.join(__dirname, '..', '..', '..', process.env.CENSAI_STATE_DIR || '.censai-state'));
 const CLIENT_STATE_DIR = LOCAL_STATE_DIR;
 const CLIENT_STATE_KEYS = new Map([
-  ['homebase.workspace.v1', 'workspace.json'],
-  ['homebase.presets.v1', 'presets.json'],
-  ['homebase.theme.customPresets.v1', 'theme-custom-presets.json'],
-  ['homebase.journals.v1', 'journals.json'],
-  ['homebase.scheduler.v1', 'schedules.json'],
+  ['censai.workspace.v1', 'workspace.json'],
+  ['censai.presets.v1', 'presets.json'],
+  ['censai.theme.customPresets.v1', 'theme-custom-presets.json'],
+  ['censai.journals.v1', 'journals.json'],
+  ['censai.scheduler.v1', 'schedules.json'],
 ]);
 
 function clientStatePath(key) {
@@ -41,7 +41,7 @@ clientStateRouter.put('/client-state/:key', async (req, res) => {
   try {
     await fs.promises.mkdir(CLIENT_STATE_DIR, { recursive: true });
     const nextValue = req.body?.value ?? null;
-    if (req.params.key === 'homebase.presets.v1' && Array.isArray(nextValue) && nextValue.length === 0) {
+    if (req.params.key === 'censai.presets.v1' && Array.isArray(nextValue) && nextValue.length === 0) {
       if (req.body?.allowEmpty !== true) {
         return res.status(409).json({
           error: 'Refusing to save an empty preset list without allowEmpty=true',

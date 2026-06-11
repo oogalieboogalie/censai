@@ -5,7 +5,7 @@
  * a level, and a namespace, so output is greppable and filterable; levels are
  * gated by LOG_LEVEL so prod stays quiet and dev is verbose; and metadata
  * objects are redacted so we never print tokens/passwords. It still writes to
- * the console and, by default, a daily JSONL file under .homebase-state/logs.
+ * the console and, by default, a daily JSONL file under .censai-state/logs.
  *
  *   import { createLogger } from './logger.js';
  *   const log = createLogger('terminal');

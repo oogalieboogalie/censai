@@ -20,13 +20,13 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
   }, [openingProject]);
 
   const exportWorkspace = () => {
-    const data = localStorage.getItem('homebase.workspace.v1');
+    const data = localStorage.getItem('censai.workspace.v1');
     if (!data) { alert('No workspace data to export.'); return; }
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `homebase-workspace-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `censai-workspace-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     onClose();

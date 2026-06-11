@@ -69,12 +69,27 @@ function scheduleReap(session) {
   }, delay);
 }
 
+function hasValidSession(request) {
+  // The session cookie is HttpOnly but is present on same-origin WS upgrades.
+  // We check that connect.sid exists as a minimal gate; the session middleware
+  // already validates the signature on normal HTTP routes.
+  const cookieHeader = request.headers.cookie || '';
+  return cookieHeader.split(';').some((c) => c.trim().startsWith('connect.sid='));
+}
+
 export function attachTerminalServer(server) {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
     const requestUrl = new URL(request.url || '/', 'http://localhost');
     if (requestUrl.pathname !== '/api/terminal') return;
+
+    if (!hasValidSession(request)) {
+      log.warn('Terminal WS rejected — no session cookie', { ip: request.socket?.remoteAddress });
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request, requestUrl);

@@ -2,17 +2,17 @@ import { createLogger } from '../logger.js';
 
 const apiLog = createLogger('api');
 
-const WORKSPACE_KEY = 'homebase.workspace.v1';
-const JOURNALS_KEY = 'homebase.journals.v1';
-const PRESETS_KEY = 'homebase.presets.v1';
-const THEME_CUSTOM_PRESETS_KEY = 'homebase.theme.customPresets.v1';
+const WORKSPACE_KEY = 'censai.workspace.v1';
+const JOURNALS_KEY = 'censai.journals.v1';
+const PRESETS_KEY = 'censai.presets.v1';
+const THEME_CUSTOM_PRESETS_KEY = 'censai.theme.customPresets.v1';
 const CLIENT_STATE_ENDPOINT = '/api/client-state';
-const STORAGE_MISS = Symbol('homebase.storage.miss');
+const STORAGE_MISS = Symbol('censai.storage.miss');
 
 function getLocalStorage() {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return null;
-    const testKey = '__homebase_storage_probe__';
+    const testKey = '__censai_storage_probe__';
     window.localStorage.setItem(testKey, '1');
     window.localStorage.removeItem(testKey);
     return window.localStorage;

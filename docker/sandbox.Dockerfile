@@ -1,7 +1,7 @@
-# Homebase agent/user sandbox image.
+# Censai agent/user sandbox image.
 # A portable Linux toolchain that the in-app terminal and agent shell run
 # inside. One container per project; the project is bind-mounted at /workspace.
-# Build:  docker build -f docker/sandbox.Dockerfile -t homebase-sandbox:latest .
+# Build:  docker build -f docker/sandbox.Dockerfile -t censai-sandbox:latest .
 # (The server also builds this automatically on first use.)
 FROM node:20-bookworm-slim
 

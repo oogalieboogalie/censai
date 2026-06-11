@@ -105,13 +105,13 @@ export function Landing() {
           inset: 0,
         }}
         onDragOver={(e) => {
-          if (e.dataTransfer.types.includes('text/x-homebase-file')) {
+          if (e.dataTransfer.types.includes('text/x-censai-file')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
           }
         }}
         onDrop={(e) => {
-          const fileName = e.dataTransfer.getData('text/x-homebase-file');
+          const fileName = e.dataTransfer.getData('text/x-censai-file');
           if (!fileName) return;
           e.preventDefault();
           const rect = e.currentTarget.getBoundingClientRect();

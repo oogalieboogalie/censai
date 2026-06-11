@@ -4,7 +4,7 @@ dist-landing
 coverage/
 .env
 .google_tokens.json
-.homebase-state/
+.censai-state/
 .codex-run/
 .codex-runlogs/
 .codex-*.log

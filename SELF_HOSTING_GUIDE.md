@@ -13,7 +13,7 @@ Welcome to Censai! This guide will walk you through the process of setting up an
 First, clone the Censai repository to your local machine:
 
 ```bash
-git clone https://github.com/oogalieboogalie/censai.git
+git clone https://github.com/censai-systems/censai.git
 cd censai
 ```
 
@@ -30,9 +30,20 @@ Censai is configured using environment variables.
 
     ### Core Configuration (Required)
 
-    *   `DATABASE_URL`: The connection string for the PostgreSQL database. The default `postgresql://homebase:homebase@127.0.0.1:5433/homebase` is pre-configured for the included Docker Compose setup. **You should not need to change this.**
+    *   `DATABASE_URL`: The connection string for the PostgreSQL database. The default `postgresql://censai:censai@127.0.0.1:5433/censai` is pre-configured for the included Docker Compose setup. **You should not need to change this.**
     *   `QDRANT_URL`: The URL for the Qdrant vector database. The default `http://127.0.0.1:6335` is also configured for Docker. **You should not need to change this.**
     *   `APP_ORIGIN`: The URL where the frontend application will be running. The default is `http://localhost:5173`.
+
+    ### Security Secrets (Required)
+
+    Censai uses two secrets to protect session data and encrypted agent journals. **You must set these before the server will start.** Generate each one with the command below and paste the output into your `.env` file.
+
+    ```bash
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    ```
+
+    *   `SESSION_SECRET`: Signs the HTTP session cookie. Required in all deployments; in local dev a random value is generated automatically.
+    *   `JOURNAL_SECRET`: Encrypts agent journal entries with AES-256-GCM. Each installation must have its own unique key — the server will refuse to start without it.
 
     ### AI Provider Configuration
 
@@ -49,6 +60,7 @@ Censai is configured using environment variables.
     *   `GEMINI_API_KEY`: For Google Gemini models and image generation.
     *   `OPENROUTER_API_KEY`: For models from OpenRouter.
     *   `YOUTUBE_API_KEY`: To enable the YouTube search tool.
+    *   `G_CLIENT_ID` / `G_SECRET`: Google OAuth2 credentials for Calendar and Sheets integration. Create a Web Application OAuth2 client at [console.cloud.google.com](https://console.cloud.google.com), enable the **Google Calendar API** and **Google Sheets API**, and add `http://localhost:3001/api/auth/google/callback` (or your production URL) as an authorised redirect URI.
 
 ## Step 3: Start the Backend Services
 

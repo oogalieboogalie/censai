@@ -8,15 +8,15 @@
  *   const log = createLogger('terminal');
  *   log.info('socket open', { url });
  *
- * Level resolves from (in order): localStorage 'homebase.logLevel',
+ * Level resolves from (in order): localStorage 'censai.logLevel',
  * Vite import.meta.env.VITE_LOG_LEVEL, else 'debug' in dev / 'warn' in prod.
- * Set at runtime in devtools:  localStorage.setItem('homebase.logLevel','trace')
+ * Set at runtime in devtools:  localStorage.setItem('censai.logLevel','trace')
  */
 const LEVELS = { silent: -1, error: 0, warn: 1, info: 2, debug: 3, trace: 4 };
 
 function resolveLevel() {
   try {
-    const stored = typeof localStorage !== 'undefined' && localStorage.getItem('homebase.logLevel');
+    const stored = typeof localStorage !== 'undefined' && localStorage.getItem('censai.logLevel');
     if (stored && stored.toLowerCase() in LEVELS) return stored.toLowerCase();
   } catch { /* localStorage may be unavailable */ }
   const envLevel = typeof import.meta !== 'undefined' && import.meta.env?.VITE_LOG_LEVEL;

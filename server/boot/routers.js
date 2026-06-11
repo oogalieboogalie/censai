@@ -1,5 +1,4 @@
-import { sovereignTestRouter } from '../sovereignTest.js';
-import { calendarRouter } from '../calendar.js';
+import { calendarRouter } from '../routes/calendar.js';
 import { sheetsRouter } from '../sheets.js';
 import { youtubeRouter } from '../youtube.js';
 import { authRouter } from '../routes/auth.js';
@@ -23,7 +22,6 @@ import { getSystemStatus } from '../health.js';
 import { runnerClient } from '../runner/client.js';
 
 export function mountRouters(app) {
-  app.use('/api/sovereignTest', sovereignTestRouter);
   app.use('/api/calendar', calendarRouter);
   app.use('/api/sheets', sheetsRouter);
   app.use('/api/youtube', youtubeRouter);
