@@ -83,7 +83,7 @@ See [SELF_HOSTING_GUIDE.md](SELF_HOSTING_GUIDE.md) for the full walkthrough and 
 
 ## ☁️ Censai Cloud
 
-A managed cloud version — hosted, with teams and built-in AI credits — is in the works at [censai.app](https://censai.app). Self-hosting stays free.
+A managed cloud version — hosted, with teams and built-in AI credits — is in the works. Self-hosting stays free.
 
 ---
 
