@@ -87,7 +87,7 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
           repo: githubRepo,
           path: fullPath,
           content: base64Content,
-          message: `Add ${fileName} via Homebase canvas`
+          message: `Add ${fileName} via Censai canvas`
         })
       });
 

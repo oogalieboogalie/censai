@@ -25,7 +25,7 @@ const DEFAULT_HTML_PREVIEW = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>CensaiHub Preview</title>
+    <title>Censai Preview</title>
     <style>
       body {
         margin: 0;

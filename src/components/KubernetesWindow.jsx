@@ -43,7 +43,7 @@ export function KubernetesWindow({ win, onUpdate }) {
           {error.includes('Not configured') || error.includes('No current cluster') || error.includes('No valid kubeconfig') ? (
             <div>
               <p style={{ color: 'var(--ink-soft)', marginBottom: 8 }}>Kubernetes is not configured.</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-faint)' }}>Please ensure a valid kubeconfig exists on the server where Homebase is running.</p>
+              <p style={{ fontSize: 11, color: 'var(--ink-faint)' }}>Please ensure a valid kubeconfig exists on the server where Censai is running.</p>
             </div>
           ) : (
             <p style={{ color: 'var(--ps-red)' }}>Error: {error}</p>

@@ -16,7 +16,7 @@ export function SetupGuide() {
           <li>Setup your mailcow-dockerized server (see our <a href="https://docs.mailcow.email/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>official mailcow docs</a>).</li>
           <li>Go to the mailcow Admin Panel → Configuration → Access → API keys.</li>
           <li>Generate a new API key, whitelisting your server IP.</li>
-          <li>Add the variables below to your Censai Hub <code>.env</code> file:</li>
+          <li>Add the variables below to your Censai <code>.env</code> file:</li>
         </ol>
       </div>
 
@@ -25,7 +25,7 @@ export function SetupGuide() {
       </pre>
 
       <p style={{ fontSize: 12, color: 'var(--ink-faint)', fontStyle: 'italic', margin: 0 }}>
-        After adding the keys, restart the Censai Hub server with <code>docker compose restart homebase</code> (or the local development process) to enable the panel.
+        After adding the keys, restart the Censai server with <code>docker compose restart homebase</code> (or the local development process) to enable the panel.
       </p>
     </div>
   );

@@ -6,17 +6,17 @@ describe('scheduler project helpers', () => {
   test('merges shared projects with the current local project without duplicates', () => {
     const options = buildSchedulerProjectOptions(
       [
-        { id: 'shared-censaihub', name: 'CensaiHub', path: 'C:\\Homebase\\CensaiHub' },
+        { id: 'shared-demo', name: 'Demo', path: 'C:\\Projects\\Demo' },
         { id: 'demo-repo', name: 'Demo Repo', repo: 'owner/demo' },
       ],
-      { projectId: 'shared-censaihub', name: 'CensaiHub', path: 'C:\\Homebase\\CensaiHub' }
+      { projectId: 'shared-demo', name: 'Demo', path: 'C:\\Projects\\Demo' }
     );
 
     expect(options).toHaveLength(2);
     expect(options[0]).toEqual(expect.objectContaining({
-      name: 'CensaiHub',
-      path: 'C:\\Homebase\\CensaiHub',
-      value: 'shared-censaihub',
+      name: 'Demo',
+      path: 'C:\\Projects\\Demo',
+      value: 'shared-demo',
     }));
     expect(options[1]).toEqual(expect.objectContaining({
       name: 'Demo Repo',
@@ -27,10 +27,10 @@ describe('scheduler project helpers', () => {
 
   test('prefers explicit project references for scheduled handoff resolution', () => {
     expect(getSchedulerProjectReference({
-      projectRef: 'shared-censaihub',
-      projectName: 'CensaiHub',
-      projectPath: 'C:\\Homebase\\CensaiHub',
-    })).toBe('shared-censaihub');
+      projectRef: 'shared-demo',
+      projectName: 'Demo',
+      projectPath: 'C:\\Projects\\Demo',
+    })).toBe('shared-demo');
 
     expect(getSchedulerProjectReference({
       repo: 'owner/demo',

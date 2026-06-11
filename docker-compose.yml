@@ -80,8 +80,10 @@ services:
       GOOGLE_REDIRECT_URI: http://localhost:3002/api/auth/google/callback
       PORT: 3001
       NODE_ENV: production
-      HOMEBASE_HOST_PROJECT_ROOT: C:\Homebase\CensaiHub
-      HOMEBASE_CONTAINER_PROJECT_ROOT: /workspace/CensaiHub
+      # Optional host<->container path mapping for the terminal/runner.
+      # Set these if you mount a host project directory into the container.
+      # HOMEBASE_HOST_PROJECT_ROOT: /path/to/your/project
+      # HOMEBASE_CONTAINER_PROJECT_ROOT: /workspace/project
       RUNNER_ENABLED: "true"
       RUNNER_URL: http://runner:3003
     depends_on:

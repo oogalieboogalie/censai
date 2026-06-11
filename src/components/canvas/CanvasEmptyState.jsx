@@ -43,7 +43,7 @@ export function EmptyState({ onSpawn }) {
       <div style={{ textAlign: 'center', maxWidth: 480, pointerEvents: 'auto' }}>
         <img
           src="/assets/app-icon-512.png"
-          alt="Censai Hub"
+          alt="Censai"
           style={{
             display: 'block',
             width: 108,
@@ -59,7 +59,7 @@ export function EmptyState({ onSpawn }) {
           onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-6px) scale(1.06) rotate(3deg)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0) scale(1) rotate(0deg)'}
         />
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 18 }}>· CensaiHub ·</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 18 }}>· Censai ·</div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 600, lineHeight: 1.05, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 14 }}>An infinite canvas<br/>for you and your agents.</div>
         <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.55, maxWidth: 380, margin: '0 auto 28px' }}>Spin up a window, drag an agent in from the pink rail on the right, and design the work around the project — not the other way around.</div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>

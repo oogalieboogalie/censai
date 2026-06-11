@@ -32,8 +32,8 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
     onClose();
   };
 
-  const aboutCensaiHub = () => {
-    alert('CensaiHub v0.1.0\n\nAn infinite canvas for you and your agents.\nBuilt by Alex for the Censai ecosystem.\n\n· Drag agents onto windows to assign them\n· Rubber-band a region to plan\n· Edit system prompts to shape behavior');
+  const aboutCensai = () => {
+    alert('Censai\n\nAn infinite canvas for you and your agents.\nBuilt by Alex at Censai Systems.\n\n· Drag agents onto windows to assign them\n· Rubber-band a region to plan\n· Edit system prompts to shape behavior');
     onClose();
   };
 
@@ -79,7 +79,7 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
               if (e.key === 'Enter') commitOpenProject();
               if (e.key === 'Escape') { setOpeningProject(false); setProjectError(''); }
             }}
-            placeholder="C:\Homebase\CensaiHub"
+            placeholder="C:\path\to\your\project"
             style={{ all: 'unset', border: '1px solid var(--hairline)', background: 'var(--surface-2)', borderRadius: 6, padding: '6px 8px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink)' }}
           />
           <input
@@ -185,7 +185,7 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
       <MenuItem label="Export workspace" onClick={exportWorkspace} />
       <MenuItem label="Settings" onClick={onClose} />
       <MenuSep />
-      <MenuItem label="About CensaiHub" onClick={aboutCensaiHub} />
+      <MenuItem label="About Censai" onClick={aboutCensai} />
     </div>
   </>;
 }

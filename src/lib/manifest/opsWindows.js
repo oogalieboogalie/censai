@@ -24,7 +24,7 @@ export const OPS_WINDOW_MANIFESTS = [
     lab: {
       title: 'Code Editor',
       props: {
-        code: "function helloHomebase() {\n  return 'Design safely first.';\n}\n",
+        code: "function helloCensai() {\n  return 'Design safely first.';\n}\n",
       },
     },
   },

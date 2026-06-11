@@ -6,8 +6,8 @@ describe('agent task completion receipts', () => {
       {
         id: 'task-1',
         title: 'Add receipt flow',
-        project: 'CensaiHub',
-        prompt: 'Handoff file: C:\\Homebase\\CensaiHub\\.team\\handoffs\\receipt.md',
+        project: 'Demo',
+        prompt: 'Handoff file: C:\\Projects\\Demo\\.team\\handoffs\\receipt.md',
       },
       {
         status: 'completed',
@@ -33,8 +33,8 @@ describe('agent task completion receipts', () => {
       'Surfaced receipts in Live Operations.',
     ]);
     expect(receipt.landed).toEqual(expect.arrayContaining([
-      'Handoff: C:\\Homebase\\CensaiHub\\.team\\handoffs\\receipt.md',
-      'Project: CensaiHub',
+      'Handoff: C:\\Projects\\Demo\\.team\\handoffs\\receipt.md',
+      'Project: Demo',
       'server/memory/tasks.js',
       'src/components/operations/TaskQueuePanel.jsx',
     ]));

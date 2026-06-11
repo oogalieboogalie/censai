@@ -7,7 +7,7 @@ function greet(name) {
   return 'Hello, ' + name + '!';
 }
 
-console.log(greet('CensaiHub'));`;
+console.log(greet('Censai'));`;
 
 function lineCount(value) {
   return Math.max(1, String(value || '').split('\n').length);

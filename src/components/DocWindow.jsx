@@ -49,7 +49,7 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign }) 
                 const calWin = wins?.find(w => w.kind === 'calendar');
                 const prefill = {
                   title: `Review: ${win.fileName}`,
-                  description: `Review document ${win.fileName} on Homebase canvas.\n\nhb://doc/${win.fileName}`,
+                  description: `Review document ${win.fileName} on Censai canvas.\n\nhb://doc/${win.fileName}`,
                   date: new Date().toISOString().split('T')[0],
                   startTime: '09:00',
                   endTime: '10:00'

@@ -28,7 +28,7 @@ describe('Canvas interaction helpers', () => {
   });
 
   test('extracts the basename from Windows and POSIX paths', () => {
-    expect(basenameFromPath('C:\\Homebase\\CensaiHub')).toBe('CensaiHub');
+    expect(basenameFromPath('C:\\Projects\\Demo')).toBe('Demo');
     expect(basenameFromPath('/tmp/workspace')).toBe('workspace');
   });
 

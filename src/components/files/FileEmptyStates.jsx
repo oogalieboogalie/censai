@@ -8,7 +8,7 @@ export function LocalEmptyState({ pathInput, setPathInput, loadDir }) {
       </div>
       <input
         type="text"
-        placeholder="e.g. C:\Homebase\CensaiHub"
+        placeholder="e.g. C:\path\to\your\project"
         value={pathInput}
         onChange={e => setPathInput(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') loadDir(); }}

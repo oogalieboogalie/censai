@@ -30,7 +30,7 @@ export function Chrome({
       <div style={{ position: 'fixed', top: 0, left: '50%', transform: `translateX(-50%) translateY(${folded ? '-100%' : '0'})`, transition: 'transform 0.4s cubic-bezier(.4,.0,.2,1), opacity 0.4s', opacity: fade ? 0 : 1, zIndex: 50 }}
         onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }} onMouseLeave={(e) => { if (fade) e.currentTarget.style.opacity = 0; }}>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--hairline)', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, padding: '8px 22px 10px', boxShadow: 'var(--shadow-card)', display: 'flex', alignItems: 'center', gap: 14, minWidth: 320 }}>
-          <img src="/assets/app-icon-64.png" alt="Censai Hub Logo" style={{ height: 24, width: 24, borderRadius: 4 }} />
+          <img src="/assets/app-icon-64.png" alt="Censai logo" style={{ height: 24, width: 24, borderRadius: 4 }} />
           <button title="File menu" onClick={() => setShowFiles(s => !s)} style={{ all: 'unset', cursor: 'pointer', width: 26, height: 26, borderRadius: 8, display: 'grid', placeItems: 'center', color: 'var(--ink-soft)', background: showFiles ? 'var(--surface-2)' : 'transparent' }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
           </button>

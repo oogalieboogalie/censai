@@ -1,25 +1,25 @@
-# CensaiHub Self-Hosting Guide
+# Censai Self-Hosting Guide
 
-Welcome to CensaiHub! This guide will walk you through the process of setting up and running your own instance of the CensaiHub platform.
+Welcome to Censai! This guide will walk you through the process of setting up and running your own instance of the Censai platform.
 
 ## Prerequisites
 
 1.  **Docker:** You will need Docker and Docker Compose to run the required backend services (PostgreSQL, Qdrant).
 2.  **Node.js:** The application server and frontend are powered by Node.js.
-3.  **An AI Provider:** By default, CensaiHub is configured to work with a local Ollama-compatible API endpoint. You can install [Ollama](https://ollama.com/) to get started quickly.
+3.  **An AI Provider:** By default, Censai is configured to work with a local Ollama-compatible API endpoint. You can install [Ollama](https://ollama.com/) to get started quickly.
 
 ## Step 1: Clone the Repository
 
-First, clone the CensaiHub repository to your local machine:
+First, clone the Censai repository to your local machine:
 
 ```bash
-git clone <repository_url>
-cd CensaiHub
+git clone https://github.com/oogalieboogalie/censai.git
+cd censai
 ```
 
 ## Step 2: Configure Your Environment
 
-CensaiHub is configured using environment variables.
+Censai is configured using environment variables.
 
 1.  **Create a `.env` file:** Copy the example file to a new `.env` file in the root of the project.
     ```bash
@@ -36,17 +36,17 @@ CensaiHub is configured using environment variables.
 
     ### AI Provider Configuration
 
-    CensaiHub needs to connect to a Large Language Model (LLM). The easiest way to get started is with a local model via Ollama.
+    Censai needs to connect to a Large Language Model (LLM). The easiest way to get started is with a local model via Ollama.
 
     *   `AI_BASE_URL`: The base URL of your AI provider's API. For a local Ollama instance, this is `http://localhost:11434/v1`.
     *   `AI_API_KEY`: The API key for your provider. For Ollama, the default value is `ollama`.
-    *   `AI_MODEL`: The name of the model you want to use (e.g., `llama3`).
+    *   `AI_MODEL`: The name of the model you want to use. Pick one that supports function calling (e.g., `qwen3-coder:latest`).
 
     ### Optional: Connecting to Other Services
 
     You can add API keys for other services to unlock more features:
 
-    *   `GEMINI_API_KEY`: For Google Gemini models.
+    *   `GEMINI_API_KEY`: For Google Gemini models and image generation.
     *   `OPENROUTER_API_KEY`: For models from OpenRouter.
     *   `YOUTUBE_API_KEY`: To enable the YouTube search tool.
 
@@ -55,7 +55,7 @@ CensaiHub is configured using environment variables.
 In a terminal, run the following command from the root of the project to start the PostgreSQL and Qdrant databases using Docker:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This will download the necessary images and start the containers in the background.
@@ -72,6 +72,6 @@ This will download the necessary images and start the containers in the backgrou
     npm run dev
     ```
 
-This command starts both the backend server (on port 3002) and the frontend development server (on port 5173) concurrently.
+This command starts both the backend server (on port 3001) and the frontend development server (on port 5173) concurrently.
 
-You should now be able to access CensaiHub in your browser at `http://localhost:5173`!
+You should now be able to access Censai in your browser at `http://localhost:5173`!
