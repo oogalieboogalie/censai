@@ -13,11 +13,19 @@ Thanks for your interest! Censai is young and moving fast, so small, focused PRs
 Run the full check suite:
 
 ```bash
-npm run check   # lint + tests + build
+npm run check      # lint + tests + build
 npm run window:validate
+npm run security   # malicious-code tripwires (also runs in CI)
 ```
 
 Tests use experimental VM modules — always use the npm scripts, never `jest` directly.
+
+## Security
+
+Because Censai runs AI agents with real tools, every PR goes through a security gate (tripwires,
+secret scanning, dependency audit, CodeQL) on top of normal CI. Please read
+[SECURITY.md](SECURITY.md) before contributing — it explains what's checked and how to report a
+vulnerability privately (never in a public issue).
 
 ## Adding a window type
 
