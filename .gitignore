@@ -20,10 +20,10 @@ outputs-sandbox-resolver.cjs
 *.log
 
 # local and agent workspace directories
-backups/
-scratch/
-outputs/
-.codex-work/
-to-dos/
-agents/
-vex/logs/
+/backups/
+/scratch/
+/outputs/
+/.codex-work/
+/to-dos/
+/agents/
+/vex/logs/
