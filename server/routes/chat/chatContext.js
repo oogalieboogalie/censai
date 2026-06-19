@@ -1,21 +1,36 @@
 import { dbReady } from '../../dbState.js';
 import { openProject } from '../../workspaces.js';
 import { getAgent, getSubAgentById, buildSystemPrompt } from '../../memory.js';
-import { getSecret } from '../../secrets.js';
-import { getGeminiApiKey } from '../../googleKeys.js';
+import { resolveChatModelConfig } from '../../aiGateway/index.js';
 import { filterToolsForAgent } from '../../tools.js';
-import {
-  MODEL, BASE_URL, getApiKey, OLLAMA_MODEL_ALIASES
-} from './shared.js';
 import { buildSubAgentSystemPrompt } from './prompts.js';
+import pool from '../../db.js';
+import {
+  getUserApiKeyConfig,
+  inferUserApiKeyProvider,
+} from '../../security/userApiKeys.js';
+import { requiresPersonalApiKey } from '../../security/byokPolicy.js';
+import {
+  analyzeChangeImpact,
+  formatChangeImpactForPrompt,
+} from '../../semantic/changeImpact.js';
 
-export async function prepareChatContext(agentId, currentProject, messages) {
-  let reqModel = MODEL;
-  let reqBaseUrl = BASE_URL;
-  let reqApiKey = getApiKey();
+export async function prepareChatContext(agentId, currentProject, messages, userId = null, userRole = null) {
+  let modelConfig = resolveChatModelConfig();
+  let reqModel = modelConfig.model;
+  let reqBaseUrl = modelConfig.baseUrl;
+  let reqApiKey = modelConfig.apiKey;
+  let provider = modelConfig.provider;
   let systemPrompt = 'You are a helpful assistant.';
   const lastUserMsg = messages?.filter(m => m.from === 'me').pop()?.text;
+  const changeImpact = analyzeChangeImpact(lastUserMsg, { project: currentProject });
   let ensuredProject = null;
+
+  let effectiveRole = userRole;
+  if (userId && !effectiveRole && dbReady()) {
+    const userRes = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+    effectiveRole = userRes.rows[0]?.role || 'user';
+  }
 
   if (dbReady() && agentId) {
     try {
@@ -29,54 +44,68 @@ export async function prepareChatContext(agentId, currentProject, messages) {
         });
       }
 
-      const agent = await getAgent(agentId);
-      if (agent && agent.model_name) {
-        reqModel = agent.model_name;
-        if (agent.model_provider === 'openrouter') {
-          reqBaseUrl = 'https://openrouter.ai/api/v1';
-          reqApiKey = getSecret('OPENROUTER_API_KEY') || getApiKey();
-        } else if (agent.model_provider === 'google') {
-          reqBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-          reqApiKey = getGeminiApiKey(getApiKey());
-        } else if (agent.model_provider === 'ollama') {
-          reqBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/v1';
-          reqApiKey = 'ollama';
-          reqModel = OLLAMA_MODEL_ALIASES.get(reqModel) || reqModel;
-        } else if (agent.model_provider === 'moonshot') {
-          reqBaseUrl = process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1';
-          reqApiKey = getSecret('MOONSHOT_API_KEY') || getApiKey();
+      const agent = await getAgent(agentId, userId);
+
+      if (agent) {
+        modelConfig = resolveChatModelConfig({
+          modelProvider: agent.model_provider,
+          modelName: agent.model_name,
+        });
+        provider = agent.model_provider || modelConfig.provider;
+        reqModel = modelConfig.model;
+        reqBaseUrl = modelConfig.baseUrl;
+        reqApiKey = modelConfig.apiKey;
+      } else {
+        const sub = await getSubAgentById(agentId);
+        if (sub) {
+          modelConfig = resolveChatModelConfig({
+            modelProvider: sub.model_provider,
+            modelName: sub.model_name
+          });
+          provider = sub.model_provider || modelConfig.provider;
+          reqModel = modelConfig.model;
+          reqBaseUrl = modelConfig.baseUrl;
+          reqApiKey = modelConfig.apiKey;
+        }
+      }
+
+      // Cloud SaaS users must supply credentials for paid providers.
+      // Local and private-server installs deliberately use the server-managed route.
+      if (userId && requiresPersonalApiKey(effectiveRole)) {
+        const isLocalProvider = reqBaseUrl.includes('localhost') || reqBaseUrl.includes('127.0.0.1') || reqBaseUrl.includes('host.docker.internal');
+        const isFreeModel = provider === 'openrouter' && reqModel.endsWith(':free');
+        const credentialProvider = inferUserApiKeyProvider(provider, reqBaseUrl);
+
+        let userKeyConfig = null;
+        try {
+          userKeyConfig = await getUserApiKeyConfig(userId, credentialProvider);
+        } catch (keyErr) {
+          if (!isLocalProvider && !isFreeModel) {
+            throw new Error('Credit usage restricted. Unable to verify a personal API key.');
+          }
+          console.warn('[Tenancy] Personal key lookup failed:', keyErr.message);
+        }
+
+        if (userKeyConfig) {
+          reqApiKey = userKeyConfig.apiKey;
+          if (userKeyConfig.modelName) reqModel = userKeyConfig.modelName;
+        } else if (!isLocalProvider && !isFreeModel) {
+          throw new Error(`Credit usage restricted. "${reqModel}" requires a personal API key. Please add one in Settings or switch to a ":free" model.`);
         }
       }
 
       if (agent) {
-        const memoryPrompt = await buildSystemPrompt(agentId, lastUserMsg);
+        const memoryPrompt = await buildSystemPrompt(agentId, lastUserMsg, userId);
         if (memoryPrompt) systemPrompt = memoryPrompt;
       } else {
         const sub = await getSubAgentById(agentId);
         if (sub) {
-          const modelProvider = sub.model_provider || process.env.MODEL_PROVIDER || null;
-          const modelName = sub.model_name || process.env.MODEL_NAME || process.env.MODEL || process.env.AI_MODEL || null;
-
-          if (modelName) reqModel = modelName;
-          if (modelProvider === 'openrouter') {
-            reqBaseUrl = 'https://openrouter.ai/api/v1';
-            reqApiKey = getSecret('OPENROUTER_API_KEY') || getApiKey();
-          } else if (modelProvider === 'google') {
-            reqBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-            reqApiKey = getGeminiApiKey(getApiKey());
-          } else if (modelProvider === 'ollama') {
-            reqBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/v1';
-            reqApiKey = 'ollama';
-            reqModel = OLLAMA_MODEL_ALIASES.get(reqModel) || reqModel;
-          } else if (modelProvider === 'moonshot' || modelProvider === 'kimi') {
-            reqBaseUrl = process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1';
-            reqApiKey = getSecret('MOONSHOT_API_KEY') || getApiKey();
-          }
           systemPrompt = await buildSubAgentSystemPrompt(sub);
         }
       }
     } catch (err) {
-      console.warn('Memory enrichment failed:', err.message);
+      if (err.message.includes('Credit usage restricted')) throw err;
+      console.warn('Chat context preparation failed:', err.message);
     }
   }
 
@@ -88,6 +117,9 @@ export async function prepareChatContext(agentId, currentProject, messages) {
       `Use project tools with project: "${ensuredProject.name}" unless the user explicitly points you somewhere else.`,
     ].join('\n');
   }
+
+  const impactPrompt = formatChangeImpactForPrompt(changeImpact);
+  if (impactPrompt) systemPrompt += `\n\n${impactPrompt}`;
 
   const chatMessages = [
     { role: 'system', content: systemPrompt },
@@ -116,5 +148,7 @@ export async function prepareChatContext(agentId, currentProject, messages) {
     ? await filterToolsForAgent(agentId)
     : null;
 
-  return { reqModel, reqBaseUrl, reqApiKey, chatMessages, toolsForCaller };
+  return {
+    reqModel, reqBaseUrl, reqApiKey, reqProvider: provider, chatMessages, toolsForCaller, changeImpact
+  };
 }

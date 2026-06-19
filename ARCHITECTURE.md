@@ -182,7 +182,7 @@ If an agent has no `model_name`, it falls back to the global `AI_MODEL` from `.e
 
 ### State management
 
-All workspace state lives in `src/app/AppContent.jsx` (with hooks under `src/app/hooks/`) and is persisted to `localStorage` as `censai.workspace.v1`:
+All workspace state lives in `src/app/AppContent.jsx` (with hooks under `src/app/hooks/`) and is persisted to `localStorage` as `homebase.workspace.v1`:
 
 - `wins` -- Array of window objects (position, size, kind, kind-specific data)
 - `canvasGroups` -- Canvas grouping regions
@@ -194,7 +194,7 @@ All workspace state lives in `src/app/AppContent.jsx` (with hooks under `src/app
 - `pan` / `zoom` -- Canvas viewport
 - `penColor` / `penSize` -- Drawing tool settings
 
-Theme state is currently separate in `censai.theme.v1` (managed by ThemeProvider):
+Theme state is currently separate in `homebase.theme.v1` (managed by ThemeProvider). Keep the legacy key until a storage migration exists:
 
 - `hue`, `chroma`, `lightness` -- Accent color inputs used to derive theme tokens
 - `mood` -- Canvas mood preset (cream, slate, linen, midnight, forest, coal)

@@ -1,6 +1,8 @@
 import pool from '../db.js';
-import { buildCompletionReceipt } from '../memory/tasks.js';
+import { syncTodoArtifactsForAgentTask } from '../operational-intelligence/todoSync.js';
 import { TERMINAL_TASK_STATUSES, ACTIVE_JULES_STATUSES } from './constants.js';
+import { checkLinkedTodoPrContract } from './steward.js';
+import { buildJulesCompletionReceipt } from './receipt.js';
 
 function upper(value) {
   return String(value || '').trim().toUpperCase();
@@ -121,7 +123,7 @@ export async function syncAgentTaskFromJulesSession(session, extraState = {}) {
   const current = rows[0];
   if (!current || TERMINAL_TASK_STATUSES.has(current.status)) return null;
 
-  const patch = deriveAgentTaskPatch({
+  let patch = deriveAgentTaskPatch({
     session: session.jules_session_name,
     julesStatus: session.status,
     prNumber: session.pr_number,
@@ -133,26 +135,23 @@ export async function syncAgentTaskFromJulesSession(session, extraState = {}) {
     ...extraState,
   });
   if (!patch) return null;
+  if (patch.status === 'completed') {
+    const steward = await checkLinkedTodoPrContract(pool, taskId, extraState.changedFiles);
+    if (steward && !steward.ok) {
+      patch = {
+        status: 'blocked',
+        result: steward.message,
+        error: null,
+      };
+    }
+  }
 
   const fields = ['status = $1', 'result = $2', 'error = $3', 'updated_at = NOW()'];
   const values = [patch.status, patch.result || null, patch.error || null];
   if (TERMINAL_TASK_STATUSES.has(patch.status)) {
     fields.push('completed_at = NOW()');
     fields.push('completion_receipt = $4');
-    const receipt = buildCompletionReceipt(current, patch);
-    values.push({
-      ...receipt,
-      source: 'jules',
-      landed: [
-        session.pr_url ? `PR: ${session.pr_url}` : null,
-        session.branch ? `Branch: ${session.branch}` : null,
-        ...(receipt?.landed || []),
-      ].filter(Boolean),
-      verify: [
-        session.pr_url ? 'Open the PR and confirm the merged diff matches the requested work.' : null,
-        ...(receipt?.verify || []),
-      ].filter(Boolean),
-    });
+    values.push(buildJulesCompletionReceipt(current, patch, session, extraState.changedFiles));
   }
   values.push(taskId);
 
@@ -160,6 +159,16 @@ export async function syncAgentTaskFromJulesSession(session, extraState = {}) {
     `UPDATE agent_tasks SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
     values
   );
+  const updatedTask = updated.rows[0] || null;
+  if (updatedTask) {
+    await syncTodoArtifactsForAgentTask(pool, {
+      taskId,
+      taskStatus: updatedTask.status,
+      result: updatedTask.result,
+      error: updatedTask.error,
+      session,
+    });
+  }
 
   if (!session.agent_task_id) {
     await pool.query(
@@ -168,5 +177,5 @@ export async function syncAgentTaskFromJulesSession(session, extraState = {}) {
     );
   }
 
-  return updated.rows[0] || null;
+  return updatedTask;
 }

@@ -36,12 +36,12 @@ describe('provider adapter registry', () => {
     expect(getUnimplementedProviderIds()).toEqual([]);
   });
 
-  test('isProviderConfigured reflects credential presence', () => {
+  test('isProviderConfigured reflects credential presence', async () => {
     const fake = { id: 'x', authMode: 'apiKey', getCredential: () => 'tok' };
     const empty = { id: 'y', authMode: 'apiKey', getCredential: () => '' };
-    expect(isProviderConfigured(fake)).toBe(true);
-    expect(isProviderConfigured(empty)).toBe(false);
-    expect(isProviderConfigured(null)).toBe(false);
+    expect(await isProviderConfigured(fake)).toBe(true);
+    expect(await isProviderConfigured(empty)).toBe(false);
+    expect(await isProviderConfigured(null)).toBe(false);
   });
 
   test('resolveConnectionState: not configured -> disconnected (no probe)', async () => {

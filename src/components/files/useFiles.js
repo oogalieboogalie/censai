@@ -1,5 +1,11 @@
 import React from 'react';
 
+export function normalizeSearchResults(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
 export function useFiles({ win, onUpdate, currentProject }) {
   const mode = win.mode || 'local';
   const [tree, setTree] = React.useState(null);
@@ -50,12 +56,12 @@ export function useFiles({ win, onUpdate, currentProject }) {
       if (mode === 'local') {
         fetch(`/api/files/search?path=${encodeURIComponent(win.dirPath || '')}&q=${encodeURIComponent(searchInput)}`)
           .then(res => res.json())
-          .then(data => { setSearchResults(data); setSearchLoading(false); })
+          .then(data => { setSearchResults(normalizeSearchResults(data)); setSearchLoading(false); })
           .catch(() => { setSearchResults([]); setSearchLoading(false); });
       } else if (mode === 'github' && win.githubRepo) {
         fetch(`/api/github/search?repo=${encodeURIComponent(win.githubRepo)}&q=${encodeURIComponent(searchInput)}`)
           .then(res => res.json())
-          .then(data => { setSearchResults(data); setSearchLoading(false); })
+          .then(data => { setSearchResults(normalizeSearchResults(data)); setSearchLoading(false); })
           .catch(() => { setSearchResults([]); setSearchLoading(false); });
       }
     }, 400);

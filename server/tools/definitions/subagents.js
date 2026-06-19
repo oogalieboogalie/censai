@@ -3,7 +3,7 @@ export const subagentTools = [
     type: 'function',
     function: {
       name: 'create_sub_agent',
-      description: 'Create a specialized sub-agent under your command, bound to one of your projects. Sub-agents are the actual workers — they do the file editing, reviewing, or research inside your project directory. Choose a permission tier that matches the job.',
+      description: 'Create a specialized persistent sub-agent under your command. The server always searches your active roster first and blocks creation when an existing agent can be reused. Prefer submit_agent_task or dispatch_squad for normal work; create only genuinely distinct long-lived roles.',
       parameters: {
         type: 'object',
         properties: {
@@ -17,6 +17,7 @@ export const subagentTools = [
           preset: { type: 'string', enum: ['refactorer', 'scout', 'coder', 'reviewer'], description: 'Pre-configured sub-agent preset. Automatically overrides role, specialty, and permission with high-quality defaults.' },
           class: { type: 'string', enum: ['scout', 'builder', 'auditor', 'sentry'], description: 'Named agent class. scout = exploration/research (gemma4:31b:cloud), builder = feature implementation (minimax-m2.5:cloud), auditor = domain-specific review (minimax-m2.5:cloud), sentry = health/incident monitoring (gemma4:31b:cloud). Automatically sets model and permission defaults.' },
           review_specialty: { type: 'string', enum: ['code', 'schema', 'infra', 'security', 'api-design', 'test-coverage'], description: 'For auditor class agents: injects a domain-specific system prompt. code = quality/conventions, schema = DB design, infra = Docker/ops, security = OWASP/vulns, api-design = REST contracts, test-coverage = coverage gaps.' },
+          force_new: { type: 'boolean', description: 'Create a separate persistent role even when a matching active sub-agent exists. Default false; use only when reuse is genuinely inappropriate.' },
         },
         required: ['name'],
       },

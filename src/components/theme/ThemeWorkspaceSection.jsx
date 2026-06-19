@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '../Icons.jsx';
 import { SURFACE_CONTROLS, useTheme } from '../Theme.jsx';
 import { SurfaceControl, ThemePanelCard } from './ThemeControls.jsx';
+import { CanvasInteractionSettings } from './CanvasInteractionSettings.jsx';
 
 export function FineTuneSection({ theme, setTheme, clearOverrides, activeSurface, setActiveSurface }) {
   return (
@@ -20,7 +21,7 @@ export function FineTuneSection({ theme, setTheme, clearOverrides, activeSurface
   );
 }
 
-export function WorkspaceSection({ focusMode, setFocusMode, penMode, setPenMode, onResetWorkspace }) {
+export function WorkspaceSection({ focusMode, setFocusMode, penMode, setPenMode, onResetWorkspace, onLogout }) {
   const { theme, setTheme } = useTheme();
   return (
     <ThemePanelCard style={{ padding: 14, display: 'grid', gap: 13 }}>
@@ -46,6 +47,7 @@ export function WorkspaceSection({ focusMode, setFocusMode, penMode, setPenMode,
         checked={theme.gridSnapping !== false}
         onChange={() => setTheme({ gridSnapping: theme.gridSnapping === false })}
       />
+      <CanvasInteractionSettings />
       <div style={{ display: 'grid', gap: 4, padding: '4px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Window Border Thickness</span>
@@ -76,15 +78,30 @@ export function WorkspaceSection({ focusMode, setFocusMode, penMode, setPenMode,
           style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
         />
       </div>
-      {onResetWorkspace && (
-        <button
-          onClick={onResetWorkspace}
-          style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'oklch(0.58 0.18 25 / 0.12)', color: 'oklch(0.58 0.18 25)', border: '1px solid oklch(0.58 0.18 25 / 0.22)' }}
-        >
-          <Icon.Close size={13} />
-          Reset workspace
-        </button>
-      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {onResetWorkspace && (
+          <button
+            onClick={onResetWorkspace}
+            style={{ all: 'unset', cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'oklch(0.58 0.18 25 / 0.12)', color: 'oklch(0.58 0.18 25)', border: '1px solid oklch(0.58 0.18 25 / 0.22)' }}
+          >
+            <Icon.Close size={13} />
+            Reset workspace
+          </button>
+        )}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            style={{ all: 'unset', cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'oklch(0.5 0 0 / 0.08)', color: 'var(--ink-soft)', border: '1px solid var(--hairline)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Log out
+          </button>
+        )}
+      </div>
     </ThemePanelCard>
   );
 }
@@ -107,4 +124,3 @@ function WorkspaceToggle({ label, description, checked, onChange }) {
     </div>
   );
 }
-

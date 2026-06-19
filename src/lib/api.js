@@ -7,6 +7,11 @@ import * as system from './api/system.js';
 import * as providers from './api/providers.js';
 import * as schedules from './api/schedules.js';
 import * as integrations from './api/integrations.js';
+import * as operationalIntelligence from './api/operationalIntelligence.js';
+import * as capabilities from './api/capabilities.js';
+import * as attributes from './api/attributes.js';
+import * as keys from './api/keys.js';
+import * as agentActivity from './api/agentActivity.js';
 
 export const api = {
   ...agents,
@@ -17,5 +22,10 @@ export const api = {
   ...system,
   ...providers,
   ...schedules,
-  ...integrations
+  ...integrations,
+  ...operationalIntelligence,
+  ...capabilities,
+  ...attributes,
+  ...keys,
+  ...agentActivity,
 };

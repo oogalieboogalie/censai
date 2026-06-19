@@ -10,7 +10,7 @@
     "dist-landing/",
     "node_modules/",
     "coverage/",
-    ".censai-state/",
+    ".homebase-state/",
     "tools/scaffolder/templates/"
   ],
   "parserOptions": {

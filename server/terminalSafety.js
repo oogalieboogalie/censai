@@ -7,9 +7,9 @@
 // commands (deleting a folder, dropping a table, force-pushing a feature branch)
 // still run — agents are trusted; this just removes the irreversible cliff.
 //
-// Disable entirely with CENSAI_TERMINAL_NO_TRIPWIRE=true.
+// Disable entirely with HOMEBASE_TERMINAL_NO_TRIPWIRE=true.
 
-const TRIPWIRE_DISABLED = process.env.CENSAI_TERMINAL_NO_TRIPWIRE === 'true';
+const TRIPWIRE_DISABLED = process.env.HOMEBASE_TERMINAL_NO_TRIPWIRE === 'true';
 
 // A recursive `rm` that targets an entire root/home tree (not a specific,
 // recoverable path like ./dist or node_modules).

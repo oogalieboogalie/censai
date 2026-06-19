@@ -25,7 +25,7 @@ export function SetupGuide() {
       </pre>
 
       <p style={{ fontSize: 12, color: 'var(--ink-faint)', fontStyle: 'italic', margin: 0 }}>
-        After adding the keys, restart the Censai server with <code>docker compose restart hub</code> (or the local development process) to enable the panel.
+        After adding the keys, restart the Censai server with <code>docker compose restart homebase</code> (or the local development process) to enable the panel.
       </p>
     </div>
   );

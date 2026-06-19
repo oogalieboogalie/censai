@@ -1,11 +1,13 @@
 import {
-  updateAgentTask, getSubAgentById, sendAgentMessage
+  updateAgentTask, getSubAgentById, sendAgentMessage, buildCompletionReceipt
 } from '../memory.js';
+import { toolCallOk } from '../routes/chat/toolOutcome.js';
+import { withLongcatToolCallFallback } from '../routes/chat/longcatToolCalls.js';
 import {
   buildSubAgentSystemPrompt,
-  getSubAgentModelConfig,
-  fetchChatCompletion
+  getSubAgentModelConfig
 } from '../routes/chat/index.js';
+import { callModel } from '../aiGateway/index.js';
 import { executeTool, filterToolsForAgent } from '../tools.js';
 import { 
   log, TASK_SUBMISSION_PREVIEW_CHARS, MAX_ROUNDS, TASK_TIMEOUT_MS 
@@ -49,9 +51,17 @@ export async function runTask(task) {
 
   const done = log.startTimer();
   log.info('task start', { taskId: task.id, assignee: sub.name || sub.id, title: task.title, priority: task.priority || 'normal' });
+  const toolCalls = [];
+  // Same additive `ok` flag the chat loop streams: the harness, not the model,
+  // records per-tool outcomes in the completion receipt.
+  const receiptWith = (patch) => {
+    const receipt = buildCompletionReceipt(task, patch);
+    return receipt ? { ...receipt, tool_calls: toolCalls } : null;
+  };
   try {
     const systemPrompt = await buildSubAgentSystemPrompt(sub);
-    const { modelName, baseUrl, apiKey } = getSubAgentModelConfig(sub);
+    const modelConfig = getSubAgentModelConfig(sub);
+    const { modelName, baseUrl, apiKey, modelProvider } = modelConfig;
     const tools = await filterToolsForAgent(sub.id);
 
     const messages = [
@@ -91,9 +101,19 @@ export async function runTask(task) {
         tools,
       };
 
-      const data = await fetchChatCompletion(baseUrl, apiKey, body, TASK_TIMEOUT_MS);
+      const data = await callModel({
+        config: {
+          provider: modelProvider,
+          model: modelName,
+          baseUrl,
+          apiKey,
+        },
+        body,
+        timeoutMs: TASK_TIMEOUT_MS,
+        logContext: { source: 'task-worker', taskId: task.id, round },
+      });
       const choice = data.choices?.[0];
-      const msg = choice?.message;
+      const msg = withLongcatToolCallFallback(choice?.message);
 
       if (msg?.tool_calls?.length > 0) {
         const calls = msg.tool_calls.slice(0, 10);
@@ -104,7 +124,9 @@ export async function runTask(task) {
           let args = {};
           try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
           log.debug('task tool call', { taskId: task.id, round, tool: toolName });
+          const toolStartedAt = Date.now();
           const result = await executeTool(sub.id, toolName, args, { agentTaskId: task.id });
+          toolCalls.push({ tool: toolName, ok: toolCallOk(result), ms: Date.now() - toolStartedAt, round });
           messages.push({ role: 'tool', tool_call_id: call.id, content: String(result) });
         }
         continue;
@@ -117,6 +139,7 @@ export async function runTask(task) {
     await updateAgentTask(task.id, {
       status: 'completed',
       result: finalText,
+      completion_receipt: receiptWith({ status: 'completed', result: finalText }),
     });
     log.info('task completed', { taskId: task.id, rounds: round, ms: done() });
     await notifyParentTaskSubmission(task, 'completed', finalText);
@@ -130,6 +153,7 @@ export async function runTask(task) {
     await updateAgentTask(task.id, {
       status: 'failed',
       error: err.message,
+      completion_receipt: receiptWith({ status: 'failed', error: err.message }),
     });
     await notifyParentTaskSubmission(task, 'failed', err.message);
     if (task.batch_id) {

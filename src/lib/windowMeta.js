@@ -21,11 +21,6 @@
 //     modeAvailability: { local_desktop, private_server, cloud_saas },
 //     lab: { title, props },               // optional window-lab fixture
 //     launcher: { show, order, icon, label, hint }, // optional empty-canvas tile
-//     glyphSource: { fields, format, filename }, // optional: makes this window
-//                                            // renderable by the Code-in-3D sink.
-//                                            // `fields` = ordered win.* keys (first
-//                                            // non-empty wins); `format` keys the
-//                                            // sink's formatter (text|json|lines|chat).
 //   };
 
 export const FALLBACK_WINDOW_SIZE = Object.freeze({ w: 360, h: 320 });
@@ -68,7 +63,6 @@ export function normalizeWindowMeta(meta = {}) {
     modeAvailability: Object.freeze({ ...DEFAULT_MODE_AVAILABILITY, ...(meta.modeAvailability || {}) }),
     lab: meta.lab ? Object.freeze({ ...meta.lab }) : null,
     launcher: meta.launcher ? Object.freeze({ ...meta.launcher }) : null,
-    glyphSource: meta.glyphSource ? Object.freeze({ ...meta.glyphSource }) : null,
   });
 }
 
@@ -85,7 +79,6 @@ export function deriveManifestEntry(meta) {
   };
   if (m.lab) entry.lab = { ...m.lab };
   if (m.launcher) entry.launcher = { ...m.launcher };
-  if (m.glyphSource) entry.glyphSource = { ...m.glyphSource };
   return entry;
 }
 

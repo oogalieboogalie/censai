@@ -243,7 +243,7 @@ INSERT INTO watch_graph (watcher, watching, relationship) VALUES
   ('atlas',      'nexus',      'infrastructure-buddy'),
   ('nexus',      'censai',     'quantum-infrastructure'),
   ('echo',       'architect',  'business-memory'),
-  ('echo',       'censai',     'project-censai'),
+  ('echo',       'censai',     'project-homebase'),
   ('foundation', 'atlas',      'deploy-partner')
 ON CONFLICT (watcher, watching) DO NOTHING;
 

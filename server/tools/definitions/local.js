@@ -3,11 +3,11 @@ export const localTools = [
     type: 'function',
     function: {
       name: 'local_list_dir',
-      description: 'List the contents of a local directory on the host machine. Paths can be relative (resolved against the Censai project root) or absolute. Prefer relative paths like "src/components" or "." to avoid guessing the absolute root.',
+      description: 'List the contents of a local directory on the host machine. Paths can be relative (resolved against the Homebase project root) or absolute. Prefer relative paths like "src/components" or "." to avoid guessing the absolute root.',
       parameters: {
         type: 'object',
         properties: {
-          dir_path: { type: 'string', description: 'Relative path (e.g. "src/components") or absolute path. Relative paths resolve against the Censai server cwd.' },
+          dir_path: { type: 'string', description: 'Relative path (e.g. "src/components") or absolute path. Relative paths resolve against the Homebase server cwd.' },
         },
         required: ['dir_path'],
       },
@@ -17,11 +17,11 @@ export const localTools = [
     type: 'function',
     function: {
       name: 'local_read_file',
-      description: 'Read the contents of a local file on the host machine. Paths can be relative (resolved against the Censai project root) or absolute. Prefer relative paths like "server.js" or "src/app.jsx".',
+      description: 'Read the contents of a local file on the host machine. Paths can be relative (resolved against the Homebase project root) or absolute. Prefer relative paths like "server.js" or "src/app.jsx".',
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: 'Relative path (e.g. "server.js") or absolute path. Relative paths resolve against the Censai server cwd.' },
+          file_path: { type: 'string', description: 'Relative path (e.g. "server.js") or absolute path. Relative paths resolve against the Homebase server cwd.' },
         },
         required: ['file_path'],
       },
@@ -31,11 +31,11 @@ export const localTools = [
     type: 'function',
     function: {
       name: 'local_write_file',
-      description: 'Create or update a local file on the host machine. Paths can be relative (resolved against the Censai project root) or absolute. CAUTION: This writes directly to the user\'s local disk.',
+      description: 'Create or update a local file on the host machine. Paths can be relative (resolved against the Homebase project root) or absolute. CAUTION: This writes directly to the user\'s local disk.',
       parameters: {
         type: 'object',
         properties: {
-          file_path: { type: 'string', description: 'Relative path (e.g. "src/components/Foo.jsx") or absolute path. Relative paths resolve against the Censai server cwd.' },
+          file_path: { type: 'string', description: 'Relative path (e.g. "src/components/Foo.jsx") or absolute path. Relative paths resolve against the Homebase server cwd.' },
           content: { type: 'string', description: 'The new contents of the file' },
         },
         required: ['file_path', 'content'],

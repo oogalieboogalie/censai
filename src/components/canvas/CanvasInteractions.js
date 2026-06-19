@@ -42,6 +42,15 @@ export function windowInsideGroup(win, group) {
   return isPointInRect(center.x, center.y, group.x, group.y, group.w, group.h);
 }
 
+export function windowsInSelection(wins, rect) {
+  return wins.filter((win) => {
+    if (win.pinned) return false;
+    const centerX = win.x + win.w / 2;
+    const centerY = win.y + win.h / 2;
+    return isPointInRect(centerX, centerY, rect.x, rect.y, rect.w, rect.h);
+  }).map((win) => win.id);
+}
+
 export function snapStrokeToRectangle(points) {
   if (!points || points.length < 6) return null;
   const cornerFit = extractRectangleCorners(points);

@@ -4,10 +4,11 @@ dist-landing
 coverage/
 .env
 .google_tokens.json
-.censai-state/
+.homebase-state/
 .codex-run/
 .codex-runlogs/
 .codex-*.log
+.perf/
 /workspaces/
 
 # scratch / junk artifacts
@@ -18,5 +19,11 @@ outputs-sandbox-resolver.cjs
 # local dev logs
 *.log
 
-# Internal team notes — never publish
-.team/
+# local and agent workspace directories
+backups/
+scratch/
+outputs/
+.codex-work/
+to-dos/
+agents/
+vex/logs/

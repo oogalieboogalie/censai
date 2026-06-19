@@ -11,7 +11,7 @@ export function CanvasRubberBand({ band, zoom }) {
       height: band.h,
       border: band.isGroup
         ? `${2 / zoom}px solid var(--hairline-strong)`
-        : `${1.5 / zoom}px dashed oklch(var(--accent-l) calc(var(--accent-c) * 0.8) var(--accent-h))`,
+        : `${1.5 / zoom}px ${band.isSelection ? 'solid' : 'dashed'} oklch(var(--accent-l) calc(var(--accent-c) * 0.8) var(--accent-h))`,
       background: band.isGroup
         ? 'oklch(0 0 0 / 0.04)'
         : 'oklch(var(--accent-l) calc(var(--accent-c) * 0.8) var(--accent-h) / 0.08)',

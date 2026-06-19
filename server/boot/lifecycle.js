@@ -3,9 +3,11 @@ import { getRuntimeMode } from '../middleware/runtimeMode.js';
 import { startLogCleanup } from '../logRetention.js';
 import { startTaskWorker } from '../taskWorker.js';
 import { startSchedulerWorker } from '../schedulerWorker.js';
+import { startAgentWakeupWorker } from '../agent-wakeups/worker.js';
 import { checkDb } from './database.js';
 import { tickJulesWatcher } from './julesWatcher.js';
 import { attachTerminalServer } from '../terminal/index.js';
+import { initializeDynamicTools, initializeMcpTools, shutdownMcpTools } from '../tools.js';
 
 const log = createLogger('server-lifecycle');
 
@@ -15,10 +17,21 @@ export async function startServer(app, options = {}) {
   const shouldStartWatchers = options.startWatchers ?? shouldStartWorkers;
 
   await checkDb();
+  await initializeDynamicTools();
+  await initializeMcpTools();
+
+  // Register shutdown handlers
+  const handleShutdown = () => {
+    log.info('Shutdown signal received, cleaning up resources...');
+    shutdownMcpTools();
+    process.exit(0);
+  };
+  process.on('SIGINT', handleShutdown);
+  process.on('SIGTERM', handleShutdown);
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {
-      log.info('Censai API server started', {
+      log.info('Homebase API server started', {
         url: `http://localhost:${port}`,
         mode: getRuntimeMode(),
       });
@@ -29,6 +42,7 @@ export async function startServer(app, options = {}) {
         startLogCleanup();
         startTaskWorker();
         startSchedulerWorker();
+        startAgentWakeupWorker();
       }
 
       if (shouldStartWatchers) {

@@ -142,10 +142,11 @@ export function useAgentDesigner(win, onCreateAgent, onUpdate, agents, groups) {
     }
   };
 
-  const filteredCategories = (toolCatalog.categories || []).map(category => ({
+  const toolGroups = toolCatalog.kits?.length ? toolCatalog.kits : (toolCatalog.categories || []);
+  const filteredCategories = toolGroups.map(category => ({
     ...category,
     tools: (category.tools || []).filter(tool => {
-      const needle = `${tool.label} ${tool.name} ${tool.description} ${tool.category}`.toLowerCase();
+      const needle = `${tool.label} ${tool.name} ${tool.description} ${tool.category} ${tool.type} ${tool.kit} ${(tool.tags || []).join(' ')}`.toLowerCase();
       return needle.includes(toolSearch.toLowerCase());
     }),
   })).filter(category => category.tools.length > 0);

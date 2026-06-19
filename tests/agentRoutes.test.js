@@ -14,6 +14,7 @@ jest.unstable_mockModule('../server/memory.js', () => ({
 
 jest.unstable_mockModule('../server/tools.js', () => ({
   listToolCatalog: jest.fn(() => ({ tools: [], categories: [] })),
+  filterToolsForAgent: jest.fn().mockResolvedValue([]),
 }));
 
 const { coreRouter } = await import('../server/routes/agents/core.js');

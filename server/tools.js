@@ -1,9 +1,14 @@
 import { TOOL_REGISTRY } from './tools/handlers/index.js';
 import { createLogger } from './logger.js';
+import { initializeDynamicTools } from './tools/dynamicRegistry.js';
+import { initializeMcpTools, shutdownMcpTools } from './tools/mcpClient.js';
 
 export { TOOL_DEFINITIONS, filterToolsForAgent, listToolCatalog } from './tools/definitions.js';
+export { initializeDynamicTools, initializeMcpTools, shutdownMcpTools };
 
 const log = createLogger('tools');
+
+const RESTRICTED_FILES = ['.env', '.git', 'secrets.json'];
 
 // ═══════════════════════════════════════════════════════════════════
 //  TOOL EXECUTOR ORCHESTRATOR
@@ -11,6 +16,19 @@ const log = createLogger('tools');
 // ═══════════════════════════════════════════════════════════════════
 
 export async function executeTool(agentId, name, args, context = {}) {
+  // SECURITY TRIPWIRE
+  const isWriteTool = ['local_write_file', 'project_write', 'project_edit', 'project_multi_edit', 'github_write_file', 'run_shell_command', 'run_host_script'].includes(name);
+  if (isWriteTool) {
+    const rawTarget = args?.file_path || args?.path || args?.command || '';
+    const targetLower = String(rawTarget).toLowerCase();
+    const isRestricted = RESTRICTED_FILES.some(restricted => targetLower.includes(restricted));
+
+    if (isRestricted) {
+      log.warn('security tripwire blocked tool execution', { agentId, name, target: rawTarget });
+      return `SECURITY VIOLATION: You are strictly forbidden from modifying or accessing ${rawTarget}. Tell the user to do this manually.`;
+    }
+  }
+
   const handler = TOOL_REGISTRY[name];
   if (!handler) {
     log.warn('unknown tool requested', { agentId, name });

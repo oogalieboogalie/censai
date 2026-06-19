@@ -16,8 +16,9 @@ import {
   mirrorSubAgentToDisk,
   removeSubAgentFromDisk
 } from '../../workspaces.js';
+import { findReusableSubAgents, formatReuseNotice } from './subagentReuse.js';
 
-export async function handleSubagentTool(agentId, name, args) {
+export async function handleSubagentTool(agentId, name, args, context = {}) {
   switch (name) {
     case 'create_sub_agent': {
       let project = null;
@@ -79,6 +80,18 @@ export async function handleSubagentTool(agentId, name, args) {
           modelProvider = 'ollama';
           modelName = args.model;
         }
+      }
+
+      if (!args.force_new) {
+        const existing = await getSubAgents(agentId);
+        const reusable = findReusableSubAgents(existing, {
+          name: args.name,
+          class: agentClass,
+          permission: args.permission,
+          projectId: project?.id,
+          specialty: args.specialty,
+        });
+        if (reusable.length > 0) return formatReuseNotice(reusable);
       }
 
       let sub = await createSubAgent(agentId, {
@@ -150,7 +163,8 @@ export async function handleSubagentTool(agentId, name, args) {
         project: args.project || match.project_id || null,
         title: args.title,
         prompt: args.prompt,
-        priority: args.priority || 'normal'
+        priority: args.priority || 'normal',
+        wakeId: context.agentWakeId || null,
       });
       return `Successfully queued task "${task.title}" (ID: ${task.id}) for sub-agent "${match.name}". The task worker will execute it asynchronously.`;
     }

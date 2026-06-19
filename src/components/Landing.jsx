@@ -1,5 +1,4 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Canvas } from './Canvas.jsx';
 import { AGENT_LINE } from '../data/landing-chat-script.js';
 import { LandingChrome } from './landing/LandingChrome.jsx';
@@ -9,6 +8,7 @@ import { ProgressFeed as LandingProgress } from './landing/LandingProgress.jsx';
 import { Toolbar as LandingToolbar } from './landing/LandingToolbar.jsx';
 import { Tour as LandingTour } from './landing/LandingTour.jsx';
 import { WaitlistModal } from './landing/WaitlistModal.jsx';
+import { RoadmapTimeline } from './RoadmapTimeline.jsx';
 import { DEFAULT_SIZES, makeDemoWindows, randomDropSpot } from './landing/landingModel.js';
 export function Landing() {
   const [wins, setWins] = React.useState(() => makeDemoWindows());
@@ -105,13 +105,13 @@ export function Landing() {
           inset: 0,
         }}
         onDragOver={(e) => {
-          if (e.dataTransfer.types.includes('text/x-censai-file')) {
+          if (e.dataTransfer.types.includes('text/x-homebase-file')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
           }
         }}
         onDrop={(e) => {
-          const fileName = e.dataTransfer.getData('text/x-censai-file');
+          const fileName = e.dataTransfer.getData('text/x-homebase-file');
           if (!fileName) return;
           e.preventDefault();
           const rect = e.currentTarget.getBoundingClientRect();

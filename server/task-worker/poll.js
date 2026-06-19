@@ -11,6 +11,10 @@ async function poll() {
     state.disabledReason = 'database_unavailable';
     return;
   }
+  if (state.disabledReason === 'database_unavailable') {
+    state.disabledReason = null;
+    log.info('task worker activated — database connected');
+  }
   try {
     const task = await claimTask();
     if (!task) return;
@@ -26,12 +30,14 @@ async function poll() {
 export function startTaskWorker() {
   if (state.running) return;
   if (!dbReady()) {
+    // Keep polling anyway: the readiness loop in boot/database.js may bring
+    // the database online later, and poll() gates on dbReady() per tick.
     state.disabledReason = 'database_unavailable';
-    log.warn(DB_UNAVAILABLE_WORKER_MESSAGE);
-    return;
+    log.warn(`${DB_UNAVAILABLE_WORKER_MESSAGE} — will activate when the database connects`);
+  } else {
+    state.disabledReason = null;
+    log.info('task worker enabled', { pollIntervalMs: POLL_INTERVAL_MS, maxConcurrent: MAX_CONCURRENT });
   }
-  state.disabledReason = null;
   state.running = true;
-  log.info('task worker enabled', { pollIntervalMs: POLL_INTERVAL_MS, maxConcurrent: MAX_CONCURRENT });
   setInterval(poll, POLL_INTERVAL_MS);
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Chrome } from '../components/Chrome.jsx';
-import { WINDOW_TYPES } from '../components/Windows.jsx';
+import { WINDOW_TYPES } from '../components/windows/windowRegistry.js';
 import { getCanvasObjectType } from './canvasObjectTypes.js';
 
 export function GenericCanvasObjectWindow({ canvasObject }) {

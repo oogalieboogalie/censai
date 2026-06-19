@@ -1,15 +1,15 @@
 import React from 'react';
 import { createLogger } from '../../lib/logger.js';
+import { captureGroupResize, resizeGroupContents } from '../../lib/layout/groupResize.js';
 
 const log = createLogger('group:resize');
 
-export function CanvasGroupResizeHandle({ group, zoom, borderColor, dragRef, onUpdate, onResizeRelayout, onLayout }) {
+export function CanvasGroupResizeHandle({ group, allWins, allGroups, zoom, borderColor, dragRef, onResize }) {
   const releaseResize = (e) => {
     if (!dragRef.current || dragRef.current.id !== e.pointerId) return;
     e.stopPropagation();
     e.target.releasePointerCapture(e.pointerId);
     log.debug('resize release', { group: group.id, didResize: !!dragRef.current.isResizing });
-    if (dragRef.current.isResizing) (onResizeRelayout || onLayout)?.();
     dragRef.current = null;
   };
 
@@ -18,7 +18,13 @@ export function CanvasGroupResizeHandle({ group, zoom, borderColor, dragRef, onU
       onPointerDown={(e) => {
         e.stopPropagation();
         e.target.setPointerCapture(e.pointerId);
-        dragRef.current = { id: e.pointerId, isResizing: true, startX: e.clientX, startY: e.clientY, startW: group.w, startH: group.h };
+        dragRef.current = {
+          id: e.pointerId,
+          isResizing: true,
+          startX: e.clientX,
+          startY: e.clientY,
+          snapshot: captureGroupResize(group, allWins, allGroups),
+        };
         log.debug('resize start', { group: group.id, button: e.button, startW: group.w, startH: group.h });
       }}
       onPointerMove={(e) => {
@@ -26,7 +32,12 @@ export function CanvasGroupResizeHandle({ group, zoom, borderColor, dragRef, onU
         e.stopPropagation();
         const dw = (e.clientX - dragRef.current.startX) / zoom;
         const dh = (e.clientY - dragRef.current.startY) / zoom;
-        onUpdate({ w: Math.max(320, dragRef.current.startW + dw), h: Math.max(240, dragRef.current.startH + dh) });
+        const start = dragRef.current.snapshot.group;
+        onResize(resizeGroupContents(
+          dragRef.current.snapshot,
+          start.w + dw,
+          start.h + dh,
+        ));
       }}
       onPointerUp={releaseResize}
       onPointerCancel={releaseResize}

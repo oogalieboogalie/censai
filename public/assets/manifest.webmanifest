@@ -1,10 +1,11 @@
 {
-  "name": "Censai Hub",
-  "short_name": "Censai Hub",
+  "name": "Censai",
+  "short_name": "Censai",
+  "description": "A visual workspace for people and AI agents.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#020713",
+  "theme_color": "#0B5CFF",
   "icons": [
     {
       "src": "/assets/web-app-icon-192.png",

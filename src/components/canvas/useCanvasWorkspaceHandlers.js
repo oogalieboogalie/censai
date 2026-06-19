@@ -2,6 +2,7 @@ import React from 'react';
 import { getOwningGroup } from '../../lib/layoutAlgo.js';
 import { screenToCanvas } from '../../lib/canvasMath.js';
 import { basenameFromPath, windowInsideGroup } from './CanvasInteractions.js';
+import { useTheme } from '../Theme.jsx';
 
 export function useCanvasWorkspaceHandlers({
   ref,
@@ -17,6 +18,8 @@ export function useCanvasWorkspaceHandlers({
   onLinkCreate,
   setWireDrag,
 }) {
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || { groupSnapping: true };
   const handleAssign = React.useCallback((data) => {
     const item = {
       id: crypto.randomUUID(),
@@ -32,8 +35,9 @@ export function useCanvasWorkspaceHandlers({
     else onSpawn('todos', { items: [item] });
   }, [wins, onUpdate, onSpawn]);
 
-  const handleDragEnd = (winId, ox, oy) => {
-    const draggedWin = wins.find(w => w.id === winId);
+  const handleDragEnd = (winId, finalPosition) => {
+    const original = wins.find(w => w.id === winId);
+    const draggedWin = original && finalPosition ? { ...original, ...finalPosition } : original;
     if (!draggedWin) return;
     const owner = getOwningGroup(draggedWin, canvasGroups, false);
     onUpdate(winId, { groupId: owner ? owner.id : null });
@@ -43,11 +47,8 @@ export function useCanvasWorkspaceHandlers({
     const group = canvasGroups.find(g => dcx >= g.x && dcx <= g.x + g.w && dcy >= g.y && dcy <= g.y + g.h);
     if (!group) return;
 
-    const targetWin = wins.find(w => w.id !== winId && dcx >= w.x && dcx <= w.x + w.w && dcy >= w.y && dcy <= w.y + w.h);
-    if (targetWin) {
-      onUpdate(draggedWin.id, { x: targetWin.x, y: targetWin.y, w: targetWin.w, h: targetWin.h });
-      onUpdate(targetWin.id, { x: ox, y: oy, w: draggedWin.w, h: draggedWin.h });
-      setTimeout(() => onAutoArrangeGroup?.(group.id), 50);
+    if (theme.groupSnapping !== false) {
+      setTimeout(() => onAutoArrangeGroup?.(group.id, group.presetId || 'SEMANTIC_WORKSPACE'), 50);
     }
   };
 

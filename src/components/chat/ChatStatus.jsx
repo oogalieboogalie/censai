@@ -1,99 +1,108 @@
 import React from 'react';
 import { Icon } from '../Icons.jsx';
+import { describeToolEvent, formatMs } from './toolActivity.js';
 
-export function ChatStatus({ liveStatus, agent }) {
-  const display = getLiveStatusDisplay(liveStatus, agent);
+const ICONS = {
+  Tools: Icon.Tools,
+  Files: Icon.Files,
+  Folder: Icon.Folder,
+  Memory: Icon.Memory,
+  Bot: Icon.Bot,
+  Send: Icon.Send,
+  Search: Icon.Search,
+  Calendar: Icon.Calendar,
+};
+
+const RECENT_ROWS = 3;
+
+function ActivityIcon({ name, size = 13, ...rest }) {
+  const Cmp = ICONS[name] || Icon.Tools;
+  return <Cmp size={size} {...rest} />;
+}
+
+function DiffChips({ stats }) {
+  if (!stats) return null;
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-      <div style={{ padding: '8px 12px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--hairline)', fontSize: 13.5, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ display: 'flex', alignItems: 'center', color: 'var(--accent-ink)' }}>{display.icon}</span>
-        <span style={{ fontSize: 12, fontWeight: 500, transition: 'all 0.2s ease-in-out' }}>{display.label}</span>
-        <span style={{ display: 'inline-flex', gap: 3, opacity: 0.7 }}>
-          {[0, 1, 2].map(i => <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: 'currentColor', animation: `gen-bounce 1.2s ease-in-out ${i * 0.15}s infinite` }} />)}
-        </span>
-      </div>
+    <span style={{ display: 'inline-flex', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700 }}>
+      {stats.added > 0 && <span style={{ color: 'var(--accent-ink)' }}>+{stats.added}</span>}
+      {stats.removed > 0 && <span style={{ color: 'var(--ink-faint)' }}>−{stats.removed}</span>}
+    </span>
+  );
+}
+
+function CompletedRow({ detail }) {
+  const d = describeToolEvent(detail, { past: true });
+  const failed = d.ok === false;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: failed ? 'var(--ps-red)' : 'var(--ink-faint)', fontFamily: 'var(--font-mono)', minWidth: 0 }}>
+      {failed
+        ? <Icon.Close size={10} style={{ color: 'var(--ps-red)', flexShrink: 0 }} data-tool-outcome="failed" />
+        : <Icon.Check size={10} style={{ color: 'var(--accent-ink)', flexShrink: 0 }} data-tool-outcome="ok" />}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{failed ? `${d.label} — failed` : d.label}</span>
+      <DiffChips stats={d.stats} />
+      {d.ms !== null && <span style={{ opacity: 0.75, flexShrink: 0 }}>{formatMs(d.ms)}</span>}
     </div>
   );
 }
 
-function getLiveStatusDisplay(liveStatus, agent) {
-  if (!liveStatus) {
+function activeDisplay(liveStatus, recentCount) {
+  if (!liveStatus || liveStatus.status === 'thinking' || !liveStatus.detail) {
     return {
-      label: 'Thinking',
-      icon: <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />
+      icon: <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />,
+      label: recentCount > 0 ? 'Thinking it over' : 'Thinking',
+      stats: null,
     };
   }
-
-  const { status, detail } = liveStatus;
-
-  if (status === 'thinking') {
+  const d = describeToolEvent(liveStatus.detail);
+  if (liveStatus.status === 'completed_tool') {
+    // Between tool rounds — the model is digesting the last result.
     return {
-      label: 'Thinking',
-      icon: <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />
+      icon: <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />,
+      label: 'Thinking it over',
+      stats: null,
     };
   }
-
-  if (status === 'calling_tool' && detail) {
-    const tool = detail.tool;
-    let label = `Executing ${tool}...`;
-    let icon = <Icon.Tools size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-
-    if (['remember', 'remember_important'].includes(tool)) {
-      label = 'Updating memory pool...';
-      icon = <Icon.Memory size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['journal', 'read_journal', 'read_journal_search'].includes(tool)) {
-      label = 'Reading personal logs...';
-      icon = <Icon.Files size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['recall', 'query_knowledge', 'know', 'associate'].includes(tool)) {
-      label = 'Querying association network...';
-      icon = <Icon.Memory size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (tool === 'web_search') {
-      label = 'Searching the web...';
-      icon = <Icon.Search size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['github_read_file', 'github_write_file', 'github_list_issues', 'github_create_issue', 'github_comment_issue'].includes(tool)) {
-      label = 'Syncing with GitHub...';
-      icon = <Icon.Files size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['local_read_file', 'local_write_file'].includes(tool)) {
-      if (tool === 'local_read_file') {
-        const filename = detail.args?.file_path ? detail.args.file_path.split('/').pop() : '';
-        label = filename ? `Reading ${filename}...` : 'Reading local file...';
-      } else {
-        const filename = detail.args?.file_path ? detail.args.file_path.split('/').pop() : '';
-        label = filename ? `Saving ${filename}...` : 'Saving local file...';
-      }
-      icon = <Icon.Files size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (tool === 'local_list_dir') {
-      label = 'Scanning workspace...';
-      icon = <Icon.Folder size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['create_sub_agent', 'list_sub_agents', 'remove_sub_agent'].includes(tool)) {
-      label = 'Summoning specialized sub-agent...';
-      icon = <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['project_read', 'project_write', 'project_edit', 'project_list', 'project_multi_edit'].includes(tool)) {
-      label = ['project_edit', 'project_multi_edit'].includes(tool) ? 'Refactoring project code...' : 'Analyzing project files...';
-      icon = <Icon.Tools size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['submit_pr', 'pr_status', 'pr_comments', 'merge_pr'].includes(tool)) {
-      label = 'Reviewing pull requests...';
-      icon = <Icon.Tools size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['jules_submit', 'jules_status', 'jules_list'].includes(tool)) {
-      label = 'Dispatching Jules AI specialist...';
-      icon = <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    } else if (['read_calendar', 'add_calendar_event'].includes(tool)) {
-      label = 'Consulting Google Calendar...';
-      icon = <Icon.Calendar size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />;
-    }
-
-    return { label, icon };
-  }
-
-  if (status === 'completed_tool' && detail) {
-    return {
-      label: `Completed ${detail.tool} in ${detail.ms}ms`,
-      icon: <Icon.Check size={13} style={{ color: 'var(--accent)' }} />
-    };
-  }
-
   return {
-    label: 'Thinking',
-    icon: <Icon.Bot size={13} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />
+    icon: <ActivityIcon name={d.icon} style={{ animation: 'gen-pulse 1.5s infinite ease-in-out' }} />,
+    label: d.label,
+    stats: d.stats,
   };
+}
+
+export function ChatStatus({ liveStatus, agent, activityLog = [] }) {
+  const recent = activityLog.slice(-RECENT_ROWS);
+  const hiddenCount = activityLog.length - recent.length;
+  const active = activeDisplay(liveStatus, activityLog.length);
+
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+      <div style={{
+        padding: '8px 12px',
+        borderRadius: 14,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--hairline)',
+        color: 'var(--ink-soft)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        maxWidth: '78%',
+        minWidth: 0,
+      }}>
+        {hiddenCount > 0 && (
+          <div style={{ fontSize: 10, color: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }}>
+            … {hiddenCount} earlier step{hiddenCount === 1 ? '' : 's'}
+          </div>
+        )}
+        {recent.map((detail, i) => <CompletedRow key={`${detail.tool}-${i}`} detail={detail} />)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5 }}>
+          <span style={{ display: 'flex', alignItems: 'center', color: 'var(--accent-ink)', flexShrink: 0 }}>{active.icon}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, transition: 'all 0.2s ease-in-out', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active.label}</span>
+          <DiffChips stats={active.stats} />
+          <span style={{ display: 'inline-flex', gap: 3, opacity: 0.7, flexShrink: 0 }}>
+            {[0, 1, 2].map(i => <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: 'currentColor', animation: `gen-bounce 1.2s ease-in-out ${i * 0.15}s infinite` }} />)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }

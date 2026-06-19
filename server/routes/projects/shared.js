@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STATE_DIR = path.resolve(path.join(__dirname, '..', '..', '..', process.env.CENSAI_STATE_DIR || '.censai-state'));
+const STATE_DIR = path.resolve(path.join(__dirname, '..', '..', '..', '.homebase-state'));
 export const CURRENT_PROJECT_FILE = path.join(STATE_DIR, 'current-project.json');
 export const CORE_PROJECT_OWNERS = [
   'architect',

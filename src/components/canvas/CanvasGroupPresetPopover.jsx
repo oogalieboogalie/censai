@@ -1,5 +1,6 @@
 import React from 'react';
 import { getBuiltInPresets } from '../../lib/layoutAlgo.js';
+import { CanvasGroupPresetPreview } from './CanvasGroupPresetPreview.jsx';
 
 export function CanvasGroupPresetPopover({ presetMenuOpen, setPresetMenuOpen, setSavingPreset, setPresetName, allWins, group, zoom, onApplyBuiltInPreset, savingPreset, saveInputRef, presetName, onSavePreset, presets, onLoadPreset, onDeletePreset }) {
   return <>
@@ -34,14 +35,15 @@ export function CanvasGroupPresetPopover({ presetMenuOpen, setPresetMenuOpen, se
                 const cy = w.y + w.h / 2;
                 return cx >= group.x && cx <= group.x + group.w && cy >= group.y && cy <= group.y + group.h;
               });
-              const builtIns = getBuiltInPresets(inside.length);
+              const builtIns = getBuiltInPresets(inside);
 
               if (builtIns.length > 0) {
                 return (
                   <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--hairline)' }}>
                     <div style={{ padding: '0 8px 4px', fontSize: 10, color: 'var(--ink-faint)' }}>SUGGESTED FOR {inside.length} WINDOWS</div>
                     {builtIns.map(p => (
-                      <div key={p.id} style={{
+                      <button key={p.id} style={{
+                        all: 'unset', boxSizing: 'border-box', width: 'calc(100% - 4px)',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '4px 10px', borderRadius: 6, margin: '0 2px',
                         fontSize: 12.5, color: 'var(--ink)', cursor: 'pointer',
@@ -50,9 +52,12 @@ export function CanvasGroupPresetPopover({ presetMenuOpen, setPresetMenuOpen, se
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         onClick={() => { onApplyBuiltInPreset?.(p.id); setPresetMenuOpen(false); }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                        {p.label}
-                      </div>
+                        <CanvasGroupPresetPreview kind={p.preview} />
+                        <span style={{ display: 'grid', gap: 1 }}>
+                          <span>{p.label}</span>
+                          {p.description && <span style={{ fontSize: 9.5, color: 'var(--ink-faint)' }}>{p.description}</span>}
+                        </span>
+                      </button>
                     ))}
                   </div>
                 );

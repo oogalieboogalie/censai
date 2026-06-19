@@ -1,8 +1,7 @@
 import { getProject, readProjectBrief } from '../../workspaces.js';
-import { getSecret } from '../../secrets.js';
-import { getGeminiApiKey } from '../../googleKeys.js';
+import { resolveChatModelConfig } from '../../aiGateway/index.js';
 import {
-  BASE_URL, getApiKey, MODEL, OLLAMA_MODEL_ALIASES,
+  MODEL,
   FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS, DIRECT_SYNTHESIS_TOOLS
 } from './shared.js';
 
@@ -81,26 +80,15 @@ export async function buildSubAgentSystemPrompt(sub) {
 
 export function getSubAgentModelConfig(sub) {
   const modelProvider = sub.model_provider || process.env.MODEL_PROVIDER || null;
-  let modelName = sub.model_name || process.env.MODEL_NAME || process.env.MODEL || process.env.AI_MODEL || MODEL;
-  let baseUrl = BASE_URL;
-  let apiKey = getApiKey();
+  const modelName = sub.model_name || process.env.MODEL_NAME || process.env.MODEL || process.env.AI_MODEL || MODEL;
+  const config = resolveChatModelConfig({ modelProvider, modelName });
 
-  if (modelProvider === 'openrouter') {
-    baseUrl = 'https://openrouter.ai/api/v1';
-    apiKey = getSecret('OPENROUTER_API_KEY') || getApiKey();
-  } else if (modelProvider === 'google') {
-    baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-    apiKey = getGeminiApiKey(getApiKey());
-  } else if (modelProvider === 'ollama') {
-    baseUrl = (process.env.AI_BASE_URL || 'http://localhost:11434/v1').replace(/\/+$/, '');
-    apiKey = 'ollama';
-    modelName = OLLAMA_MODEL_ALIASES.get(modelName) || modelName;
-  } else if (modelProvider === 'moonshot' || modelProvider === 'kimi') {
-    baseUrl = (process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
-    apiKey = getSecret('MOONSHOT_API_KEY') || getApiKey();
-  }
-
-  return { modelProvider, modelName, baseUrl: baseUrl.replace(/\/+$/, ''), apiKey };
+  return {
+    modelProvider: config.provider,
+    modelName: config.model,
+    baseUrl: config.baseUrl,
+    apiKey: config.apiKey,
+  };
 }
 
 export function summarizeToolActions(toolActions) {

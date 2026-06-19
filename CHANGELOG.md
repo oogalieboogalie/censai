@@ -1,5 +1,7 @@
 # Changelog
 
+> **Note**: This is a secondary changelog for the OSS export. The canonical record of all changes is maintained in the root [CHANGELOG.md](../../../CHANGELOG.md).
+
 ## 0.2.0 — 2026-06-10
 
 First release as **Censai** (supersedes the openhub-oss 0.1.x line).

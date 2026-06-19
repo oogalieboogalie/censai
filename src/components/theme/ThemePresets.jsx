@@ -85,5 +85,3 @@ export function SavedPresetRow({ preset, active, onApply, onDelete }) {
     </div>
   );
 }
-
-

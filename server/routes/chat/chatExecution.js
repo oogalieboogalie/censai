@@ -1,15 +1,22 @@
 import { executeTool, TOOL_DEFINITIONS } from '../../tools.js';
+import { callModel, workspaceUsageSink } from '../../aiGateway/index.js';
 import {
-  MAX_CHAT_MODEL_ROUNDS, FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS
+  MAX_CHAT_MODEL_ROUNDS, FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS, extractMessageText
 } from './shared.js';
 import {
   shouldSynthesizeAfterToolBatch,
   buildToolSynthesisPrompt, summarizeToolActions
 } from './prompts.js';
-import { extractMessageText } from './shared.js';
+import { withLongcatToolCallFallback } from './longcatToolCalls.js';
+import { processAgentMarkers } from './markers.js';
+import { summarizeToolCall } from './toolSummary.js';
+import { toolCallOk } from './toolOutcome.js';
+import { detectUnexecutedClaims } from './claimTripwire.js';
+
+const PRIVATE_TOOLS = ['journal', 'read_journal', 'read_journal_search'];
 
 export async function runChatLoop({
-  agentId, windowId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, sendEvent, timings
+  agentId, windowId, workspaceId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, reqProvider, sendEvent, timings, userId
 }) {
   let toolActions = [];
   let finalText = '';
@@ -34,13 +41,21 @@ export async function runChatLoop({
     };
 
     const modelStartedAt = Date.now();
-    const response = await fetch(`${reqBaseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${reqApiKey}`
+    const data = await callModel({
+      config: {
+        provider: reqProvider,
+        model: reqModel,
+        baseUrl: reqBaseUrl,
+        apiKey: reqApiKey,
       },
-      body: JSON.stringify(body)
+      body,
+      logContext: { source: 'chat-loop', round },
+      usageAttribution: {
+        workspaceId,
+        actor: { kind: 'user', id: userId || 'local-user' },
+        source: 'chat-loop',
+      },
+      usageSink: workspaceUsageSink,
     });
     const modelMs = Date.now() - modelStartedAt;
     timings.model_ms += modelMs;
@@ -52,15 +67,8 @@ export async function runChatLoop({
       synthesis_requested: synthesisRequested,
       synthesis_reason: synthesisReason,
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`${response.status}: ${err}`);
-    }
-
-    const data = await response.json();
     const choice = data.choices?.[0];
-    const msg = choice?.message;
+    const msg = withLongcatToolCallFallback(choice?.message);
 
     if (!synthesisRequested && msg?.tool_calls && msg.tool_calls.length > 0) {
       const calls = msg.tool_calls.slice(0, 15);
@@ -94,28 +102,32 @@ export async function runChatLoop({
           args.__window_id = windowId;
         }
 
-        const PRIVATE_TOOLS = ['journal', 'read_journal', 'read_journal_search'];
-        sendEvent({ type: 'status', status: 'calling_tool', detail: { tool: toolName, args: PRIVATE_TOOLS.includes(toolName) ? {} : args } });
+        const isPrivate = PRIVATE_TOOLS.includes(toolName);
+        const summary = isPrivate ? null : summarizeToolCall(toolName, args);
+        sendEvent({ type: 'status', status: 'calling_tool', detail: { tool: toolName, args: isPrivate ? {} : args, ...(summary ? { summary } : {}) } });
 
         const toolStartedAt = Date.now();
         const result = argError
           ? `${argError}. Call ${toolName} again with the required arguments.`
-          : await executeTool(agentId, toolName, args);
+          : await executeTool(agentId, toolName, args, { userId });
         const toolMs = Date.now() - toolStartedAt;
         timings.tool_ms += toolMs;
-        sendEvent({ type: 'status', status: 'completed_tool', detail: { tool: toolName, ms: toolMs } });
+        const ok = toolCallOk(result);
+        sendEvent({ type: 'status', status: 'completed_tool', detail: { tool: toolName, ms: toolMs, ok, ...(summary ? { summary } : {}) } });
 
-        const safeResult = PRIVATE_TOOLS.includes(toolName) ? '[private]' : result;
+        const safeResult = isPrivate ? '[private]' : result;
         const resultText = typeof safeResult === 'string' ? safeResult : JSON.stringify(safeResult);
         const resultPreview = resultText.length > 260 ? `${resultText.slice(0, 260)}...` : resultText;
         const action = {
           tool: toolName,
-          args: PRIVATE_TOOLS.includes(toolName) ? {} : args,
+          args: isPrivate ? {} : args,
+          ...(summary ? { summary } : {}),
           result: safeResult,
           result_preview: resultPreview,
           result_chars: resultText.length,
           ms: toolMs,
           round,
+          ok,
         };
         toolActions.push(action);
         timings.tool_calls.push({
@@ -123,6 +135,7 @@ export async function runChatLoop({
           ms: toolMs,
           round,
           result_chars: resultText.length,
+          ok,
         });
 
         // Feed result back to model
@@ -162,6 +175,29 @@ export async function runChatLoop({
     }
     if (!finalText) finalText = summarizeToolActions(toolActions);
     break;
+  }
+
+  const markerResult = await processAgentMarkers(agentId, finalText, (aId, name, args) => executeTool(aId, name, args, { userId }), sendEvent);
+  if (markerResult.markers.length > 0) {
+    finalText = markerResult.text;
+    toolActions.push(...markerResult.actions);
+    for (const action of markerResult.actions) {
+      action.ok = toolCallOk(action.result);
+      timings.tool_ms += action.ms || 0;
+      timings.tool_calls.push({
+        tool: action.tool,
+        ms: action.ms || 0,
+        round: action.round,
+        result_chars: action.result_chars,
+        ok: action.ok,
+      });
+    }
+  }
+
+  const unexecutedClaimWarning = detectUnexecutedClaims(finalText, toolActions);
+  if (unexecutedClaimWarning) {
+    finalText = `${finalText}\n\n${unexecutedClaimWarning}`;
+    sendEvent({ type: 'status', status: 'unexecuted_claim' });
   }
 
   return { finalText, toolActions };

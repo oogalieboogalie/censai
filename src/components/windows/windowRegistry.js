@@ -1,6 +1,7 @@
+import React from 'react';
 import { buildWindowTypes, WINDOW_MANIFESTS, CANVAS_TYPE_TO_LEGACY_KIND, WINDOW_REGISTRY } from '../../lib/windowManifest.js';
 
-// Dynamic auto-discovery of window components using Vite eager glob imports.
+// Dynamic auto-discovery of window components using Vite lazy glob imports.
 // Two shapes are supported:
 //   1. Flat files:     src/components/<Name>Window.jsx   (legacy convention)
 //   2. Folder windows: src/components/windows/<kind>/index.jsx  (drop-in factory)
@@ -10,8 +11,8 @@ import { buildWindowTypes, WINDOW_MANIFESTS, CANVAS_TYPE_TO_LEGACY_KIND, WINDOW_
 let windowModules = {};
 let folderModules = {};
 try {
-  windowModules = import.meta.glob(['../*Window.jsx', '../GenImage.jsx'], { eager: true });
-  folderModules = import.meta.glob(['./*/index.jsx'], { eager: true });
+  windowModules = import.meta.glob(['../*Window.jsx', '../GenImage.jsx']);
+  folderModules = import.meta.glob(['./*/index.jsx']);
 } catch (e) {
   // Ignore fallback for Jest / non-Vite environments
 }
@@ -26,18 +27,22 @@ for (const manifest of WINDOW_MANIFESTS) {
   const componentPath = manifest.componentPath || '';
   // Folder window? e.g. src/components/windows/helloFactory/index.jsx
   const folderMatch = componentPath.match(/src\/components\/windows\/([^/]+)\/index\.jsx$/);
-  let mod;
+  let loader;
   let relativePath;
   if (folderMatch) {
     relativePath = `./${folderMatch[1]}/index.jsx`;
-    mod = folderModules[relativePath];
+    loader = folderModules[relativePath];
   } else {
     const fileName = componentPath.split('/').pop();
     relativePath = `../${fileName}`;
-    mod = windowModules[relativePath];
+    loader = windowModules[relativePath];
   }
-  if (mod && mod[manifest.componentName]) {
-    WINDOW_COMPONENTS[manifest.kind] = mod[manifest.componentName];
+  if (loader) {
+    WINDOW_COMPONENTS[manifest.kind] = React.lazy(() => loader().then((mod) => {
+      const component = mod[manifest.componentName];
+      if (!component) throw new Error(`Missing export "${manifest.componentName}" in "${relativePath}"`);
+      return { default: component };
+    }));
   } else {
     // If not in Vite environment (e.g. running in Jest), we ignore silently unless glob is active
     if (typeof import.meta.glob === 'function') {
@@ -63,4 +68,3 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
     }
   });
 }
-

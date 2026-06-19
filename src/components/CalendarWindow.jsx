@@ -13,16 +13,51 @@ export function CalendarWindow({ win, onUpdate, onSpawn }) {
   const [events, setEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const persistedCalendar = win.data?.calendar || {};
 
-  const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [viewMode, setViewMode] = React.useState('month'); // 'list' | 'month'
-  const [selectedDateStr, setSelectedDateStr] = React.useState(null);
+  const [currentDate, setCurrentDate] = React.useState(() => (
+    persistedCalendar.currentDate ? new Date(persistedCalendar.currentDate) : new Date()
+  ));
+  const [viewMode, setViewMode] = React.useState(persistedCalendar.viewMode || 'month'); // 'list' | 'month'
+  const [selectedDateStr, setSelectedDateStr] = React.useState(persistedCalendar.selectedDateStr || null);
 
   // Composer State
-  const [isComposing, setIsComposing] = React.useState(false);
+  const [isComposing, setIsComposing] = React.useState(Boolean(persistedCalendar.isComposing));
+
+  const persistCalendarState = React.useCallback((patch) => {
+    const currentCalendar = win.data?.calendar || {};
+    const nextCalendar = { ...currentCalendar, ...patch };
+    const changed = Object.keys(patch).some((key) => currentCalendar[key] !== nextCalendar[key]);
+    if (!changed) return;
+    onUpdate({
+      data: {
+        ...(win.data || {}),
+        calendar: nextCalendar,
+      },
+    });
+  }, [win.data, onUpdate]);
+
+  React.useEffect(() => {
+    const nextDateIso = currentDate.toISOString();
+    if (
+      (persistedCalendar.viewMode || 'month') === viewMode &&
+      persistedCalendar.currentDate === nextDateIso &&
+      (persistedCalendar.selectedDateStr || null) === selectedDateStr &&
+      Boolean(persistedCalendar.isComposing) === isComposing
+    ) {
+      return;
+    }
+    persistCalendarState({
+      viewMode,
+      currentDate: nextDateIso,
+      selectedDateStr,
+      isComposing,
+    });
+  }, [currentDate, isComposing, persistCalendarState, persistedCalendar.currentDate, persistedCalendar.isComposing, persistedCalendar.selectedDateStr, persistedCalendar.viewMode, selectedDateStr, viewMode]);
 
   const fetchEvents = React.useCallback(() => {
     setLoading(true);
+    setError(null);
     let start, end;
 
     if (viewMode === 'month') {

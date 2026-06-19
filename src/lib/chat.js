@@ -37,6 +37,7 @@ export async function sendMessageWithMeta(agentId, messages, opts = {}) {
         messages, 
         agentId, 
         windowId: opts.windowId,
+        workspaceId: opts.workspaceId,
         currentProject: opts.currentProject,
         stream: true 
       }),
@@ -49,12 +50,14 @@ export async function sendMessageWithMeta(agentId, messages, opts = {}) {
         text: data.text,
         timings: data.timings,
         tools: data.tools,
+        changeImpact: data.changeImpact,
       };
     }
 
     let finalText = '';
     let finalTimings = null;
     let finalTools = [];
+    let finalChangeImpact = null;
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -65,10 +68,14 @@ export async function sendMessageWithMeta(agentId, messages, opts = {}) {
         const event = JSON.parse(line);
         if (event.type === 'status' && opts.onStatusUpdate) {
           opts.onStatusUpdate(event.status, event.detail);
+        } else if (event.type === 'change_impact') {
+          finalChangeImpact = event.impact;
+          opts.onChangeImpact?.(event.impact);
         } else if (event.type === 'result') {
           finalText = event.text;
           finalTimings = event.timings;
           finalTools = event.tools;
+          finalChangeImpact = event.changeImpact || finalChangeImpact;
         }
       } catch (err) {
         console.error('Failed to parse streaming line:', err, line);
@@ -97,6 +104,7 @@ export async function sendMessageWithMeta(agentId, messages, opts = {}) {
       text: finalText,
       timings: finalTimings,
       tools: finalTools,
+      changeImpact: finalChangeImpact,
     };
   } catch (err) {
     console.error('Fetch error:', err);

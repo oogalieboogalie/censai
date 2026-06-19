@@ -1,6 +1,11 @@
 import React from 'react';
 import { MAX_ZOOM, MIN_ZOOM, distance, getPanAfterZoom, screenToCanvas } from '../../lib/canvasMath.js';
-import { snapStrokeToRectangle } from './CanvasInteractions.js';
+import { snapStrokeToRectangle, windowsInSelection } from './CanvasInteractions.js';
+
+export function shouldStartCanvasPan(button, keyboardHeld, panMode = 'both') {
+  return (['both', 'middle'].includes(panMode) && button === 1)
+    || (button === 0 && keyboardHeld);
+}
 
 export function useCanvasPointer({
   ref,
@@ -9,6 +14,8 @@ export function useCanvasPointer({
   onPanZoom,
   onSelect,
   onSpawnGroup,
+  wins,
+  onSelection,
   activeTool,
   penMode,
   penColor,
@@ -16,6 +23,7 @@ export function useCanvasPointer({
   setPaths,
   setRegion,
   spaceRef,
+  panMode = 'both',
 }) {
   const [band, setBand] = React.useState(null);
   const [currentPath, setCurrentPath] = React.useState(null);
@@ -23,12 +31,22 @@ export function useCanvasPointer({
   const panRef = React.useRef(null);
   const activeTouchPointsRef = React.useRef(new Map());
   const pinchRef = React.useRef(null);
+  const suppressContextMenuRef = React.useRef(false);
 
   const onPointerDown = (e) => {
     const isCanvasBg = e.target === ref.current || e.target.dataset?.canvasBg;
     const isPen = e.pointerType === 'pen';
     const isTouch = e.pointerType === 'touch';
     const isPenEraser = penMode && isPen && (e.button === 5 || e.buttons === 32);
+
+    // Blur active input/textarea/contenteditable on canvas background click/pan
+    const isPanningStart = shouldStartCanvasPan(e.button, spaceRef.current, panMode);
+    if ((isCanvasBg || isPanningStart) && document.activeElement && typeof document.activeElement.blur === 'function') {
+      const tag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || document.activeElement.contentEditable === 'true') {
+        document.activeElement.blur();
+      }
+    }
 
     if (isTouch) {
       activeTouchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -54,7 +72,7 @@ export function useCanvasPointer({
       if (!penMode) return;
     }
 
-    if (e.button === 1 || (e.button === 0 && spaceRef.current) || (penMode && isTouch && e.button === 0 && isCanvasBg)) {
+    if (isPanningStart || (penMode && isTouch && e.button === 0 && isCanvasBg)) {
       e.preventDefault();
       panRef.current = { sx: e.clientX, sy: e.clientY, ox: pan.x, oy: pan.y };
       ref.current.setPointerCapture(e.pointerId);
@@ -66,9 +84,10 @@ export function useCanvasPointer({
       e.preventDefault();
       const rect = ref.current.getBoundingClientRect();
       const canvasPt = screenToCanvas(e.clientX, e.clientY, pan.x, pan.y, zoom, rect);
-      dragRef.current = { id: e.pointerId, x0: canvasPt.x, y0: canvasPt.y, started: false, isGroup: true };
+      dragRef.current = { id: e.pointerId, x0: canvasPt.x, y0: canvasPt.y, started: false, mode: 'group' };
       ref.current.setPointerCapture(e.pointerId);
       onSelect(null);
+      onSelection?.([]);
       setRegion(null);
     }
 
@@ -89,11 +108,18 @@ export function useCanvasPointer({
         dragRef.current = { id: e.pointerId, isDrawing: true };
         setCurrentPath([{ x: canvasPt.x, y: canvasPt.y, p: pressure }]);
       } else {
-        dragRef.current = { id: e.pointerId, x0: canvasPt.x, y0: canvasPt.y, started: false, isGroup: false };
+        dragRef.current = {
+          id: e.pointerId,
+          x0: canvasPt.x,
+          y0: canvasPt.y,
+          started: false,
+          mode: e.shiftKey ? 'region' : 'selection',
+        };
       }
 
       ref.current.setPointerCapture(e.pointerId);
       onSelect(null);
+      onSelection?.([]);
       setRegion(null);
     }
   };
@@ -152,7 +178,9 @@ export function useCanvasPointer({
       y: Math.min(d.y0, canvasPt.y),
       w: Math.abs(canvasPt.x - d.x0),
       h: Math.abs(canvasPt.y - d.y0),
-      isGroup: d.isGroup,
+      mode: d.mode,
+      isGroup: d.mode === 'group',
+      isSelection: d.mode === 'selection',
     });
   };
 
@@ -185,12 +213,25 @@ export function useCanvasPointer({
 
     if (d?.isErasing) return;
 
+    if (d?.mode === 'group' && d.started) suppressContextMenuRef.current = true;
     if (d && d.started && band && band.w > 30 && band.h > 30) {
-      if (d.isGroup) onSpawnGroup({ x: band.x, y: band.y }, { w: band.w, h: band.h });
-      else setRegion(band);
+      if (d.mode === 'group') {
+        onSpawnGroup({ x: band.x, y: band.y }, { w: band.w, h: band.h });
+      } else if (d.mode === 'selection') {
+        onSelection?.(windowsInSelection(wins, band));
+        setRegion(band);
+      } else {
+        setRegion(band);
+      }
     }
     setBand(null);
   };
 
-  return { band, setBand, currentPath, onPointerDown, onPointerMove, onPointerUp, panRef };
+  const consumeContextMenuSuppression = () => {
+    const suppressed = suppressContextMenuRef.current;
+    suppressContextMenuRef.current = false;
+    return suppressed;
+  };
+
+  return { band, setBand, currentPath, onPointerDown, onPointerMove, onPointerUp, panRef, consumeContextMenuSuppression };
 }

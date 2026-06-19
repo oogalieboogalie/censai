@@ -40,6 +40,7 @@
  * @property {Object[]} [presets]
  * @property {string[]} [attachedAgents]
  * @property {string} [bgMode]
+ * @property {string} [bgColor]
  * @property {Object} [root] - Layout tree
  */
 /**

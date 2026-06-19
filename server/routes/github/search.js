@@ -24,7 +24,7 @@ export async function searchTree(req, res) {
 
   try {
     const r = await fetch(`https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-App' }
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-App' }
     });
     if (!r.ok) {
       return res.json([]);

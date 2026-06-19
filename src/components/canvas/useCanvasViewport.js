@@ -2,20 +2,24 @@ import React from 'react';
 import { MIN_ZOOM, MAX_ZOOM, getPanAfterZoom } from '../../lib/canvasMath.js';
 import { hasCanvasUiAncestor } from './CanvasInteractions.js';
 
-export function useCanvasViewport({ ref, pan, zoom, onPanZoom }) {
+export function useCanvasViewport({ ref, pan, zoom, onPanZoom, panMode = 'both' }) {
   const [spaceHeld, setSpaceHeld] = React.useState(false);
   const spaceRef = React.useRef(false);
 
   React.useEffect(() => {
+    const panCode = panMode === 'alt' ? 'Alt' : 'Space';
+    const keyboardEnabled = panMode !== 'middle';
     const down = (e) => {
-      if (e.code === 'Space' && !e.repeat && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+      const matches = panCode === 'Alt' ? e.key === 'Alt' : e.code === 'Space';
+      if (keyboardEnabled && matches && !e.repeat && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
         e.preventDefault();
         spaceRef.current = true;
         setSpaceHeld(true);
       }
     };
     const up = (e) => {
-      if (e.code === 'Space') {
+      const matches = panCode === 'Alt' ? e.key === 'Alt' : e.code === 'Space';
+      if (matches) {
         spaceRef.current = false;
         setSpaceHeld(false);
       }
@@ -26,7 +30,7 @@ export function useCanvasViewport({ ref, pan, zoom, onPanZoom }) {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     };
-  }, []);
+  }, [panMode]);
 
   React.useEffect(() => {
     const el = ref.current;

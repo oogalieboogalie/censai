@@ -1,5 +1,16 @@
 // Model options and tool defaults for AgentDesignerWindow
 export const MODEL_OPTIONS = {
+  cohere: [
+    { value: 'north-mini-code-1-0', label: 'North Mini Code 1.0 · 256K · Tool Use' },
+    { value: 'command-a-plus-05-2026', label: 'Command A+' },
+    { value: 'command-a-03-2025', label: 'Command A' },
+    { value: 'command-a-reasoning-08-2025', label: 'Command A Reasoning' },
+    { value: 'command-a-translate-08-2025', label: 'Command A Translate' },
+    { value: 'command-a-vision-07-2025', label: 'Command A Vision' },
+    { value: 'command-r-plus-08-2024', label: 'Command R+' },
+    { value: 'command-r-08-2024', label: 'Command R' },
+    { value: 'command-r7b-12-2024', label: 'Command R7B' },
+  ],
   ollama: [
     { value: 'minimax-m2.5:cloud', label: 'minimax-m2.5:cloud' },
     { value: 'qwen3-coder:latest', label: 'qwen3-coder:latest' },
@@ -9,6 +20,11 @@ export const MODEL_OPTIONS = {
   ],
   openrouter: [
     { value: 'openrouter/auto', label: 'openrouter/auto' },
+    { value: 'openrouter/owl-alpha', label: 'openrouter/owl-alpha' },
+    { value: 'google/gemini-2.0-flash-exp:free', label: 'google/gemini-2.0-flash-exp:free (Free)' },
+    { value: 'meta-llama/llama-3-8b-instruct:free', label: 'meta-llama/llama-3-8b-instruct:free (Free)' },
+    { value: 'deepseek/deepseek-chat', label: 'deepseek/deepseek-chat' },
+    { value: 'deepseek/deepseek-r1', label: 'deepseek/deepseek-r1' },
     { value: 'anthropic/claude-sonnet-4.5', label: 'anthropic/claude-sonnet-4.5' },
     { value: 'openai/gpt-4.1', label: 'openai/gpt-4.1' },
     { value: 'x-ai/grok-4', label: 'x-ai/grok-4' },

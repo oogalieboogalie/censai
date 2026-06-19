@@ -56,7 +56,7 @@ INSERT INTO capabilities (name, syntax, description, category, examples) VALUES
    'write',
    ARRAY[
      '[KNOW: Alex | prefers | practical code]',
-     '[KNOW: Censai | uses | PostgreSQL]',
+     '[KNOW: Homebase | uses | PostgreSQL]',
      '[KNOW: Censai | role | editorial lead]'
    ]),
 
@@ -123,7 +123,7 @@ INSERT INTO capabilities (name, syntax, description, category, examples) VALUES
    'read',
    ARRAY[
      '[QUERY_KNOWLEDGE: Alex]',
-     '[QUERY_KNOWLEDGE: Censai]'
+     '[QUERY_KNOWLEDGE: Homebase]'
    ]),
 
   ('READ_MESSAGES', '[READ_MESSAGES]',
@@ -153,7 +153,7 @@ ON CONFLICT (name) DO UPDATE SET
 INSERT INTO capabilities (name, syntax, description, category, available_to, examples) VALUES
 
   ('POSTGRES_TOOL_INFO', 'postgres_tool_info()',
-   'Show the available Censai Postgres tools and the CLI path. Use this before guessing or restarting the server to find SQL tooling.',
+   'Show the available Homebase Postgres tools and the CLI path. Use this before guessing or restarting the server to find SQL tooling.',
    'read',
    ARRAY['nexus'],
    ARRAY[
@@ -161,7 +161,7 @@ INSERT INTO capabilities (name, syntax, description, category, available_to, exa
    ]),
 
   ('POSTGRES_QUERY', 'postgres_query({ sql, params?, limit?, allow_write?, allow_unsafe? })',
-   'Execute SQL against Censai Postgres and return formatted JSON. Read queries run by default; writes require allow_write=true and destructive SQL also requires allow_unsafe=true.',
+   'Execute SQL against Homebase Postgres and return formatted JSON. Read queries run by default; writes require allow_write=true and destructive SQL also requires allow_unsafe=true.',
    'read',
    ARRAY['nexus'],
    ARRAY[
@@ -170,7 +170,7 @@ INSERT INTO capabilities (name, syntax, description, category, available_to, exa
    ]),
 
   ('POSTGRES_EXEC_FILE', 'postgres_exec_file({ file_path, dry_run?, allow_write?, allow_unsafe? })',
-   'Preview or execute a repo-local .sql file against Censai Postgres with write and unsafe-operation guards.',
+   'Preview or execute a repo-local .sql file against Homebase Postgres with write and unsafe-operation guards.',
    'read',
    ARRAY['nexus'],
    ARRAY[

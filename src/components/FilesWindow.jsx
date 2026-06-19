@@ -76,8 +76,8 @@ export function FilesWindow({ win, pan, zoom, onUpdate, onSpawn, currentProject 
 
         {(tree || searchResults) && (
           <div style={{ marginTop: 14, paddingLeft: 10, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-faint)', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.5 }}>
-            click · open · drag to canvas<br/>
-            {mode === 'github' && '💾 drop image on folder to save to GitHub'}
+            click opens code or docs · drag to canvas<br/>
+            {mode === 'github' && 'drop image on folder to save to GitHub'}
           </div>
         )}
       </div>

@@ -1,12 +1,19 @@
-import { getSecret } from '../../secrets.js';
-import { createLogger } from '../../logger.js';
+import {
+  aiGatewayLog,
+  CHAT_COMPLETION_TIMEOUT_MS,
+  DEFAULT_CHAT_BASE_URL,
+  DEFAULT_CHAT_MODEL,
+  OLLAMA_CHAT_MODEL_ALIASES,
+  callModel,
+  getDefaultChatApiKey,
+} from '../../aiGateway/index.js';
 
-export const log = createLogger('ai');
+export const log = aiGatewayLog;
 
-export const BASE_URL = (process.env.AI_BASE_URL || 'http://localhost:11434/v1').replace(/\/+$/, '');
-export const getApiKey = () => getSecret('AI_API_KEY') || 'ollama';
-export const MODEL = process.env.AI_MODEL || 'minimax-m2.5:cloud';
-export const TASK_WORKER_TIMEOUT_MS = Math.max(5000, Number(process.env.AGENT_TASK_WORKER_TIMEOUT_MS) || 120000);
+export const BASE_URL = DEFAULT_CHAT_BASE_URL;
+export const getApiKey = getDefaultChatApiKey;
+export const MODEL = DEFAULT_CHAT_MODEL;
+export const TASK_WORKER_TIMEOUT_MS = CHAT_COMPLETION_TIMEOUT_MS;
 export const MAX_CHAT_MODEL_ROUNDS = 10;
 export const FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS = Math.min(
   MAX_CHAT_MODEL_ROUNDS - 1,
@@ -21,52 +28,22 @@ export const DIRECT_SYNTHESIS_TOOLS = new Set([
   'report',
   'task_done',
 ]);
-export const OLLAMA_MODEL_ALIASES = new Map([
-  ['gemma4:35b', 'gemma4:31b-cloud'],
-  ['gemma4:35b:cloud', 'gemma4:31b-cloud'],
-]);
+export const OLLAMA_MODEL_ALIASES = OLLAMA_CHAT_MODEL_ALIASES;
 
 export async function fetchChatCompletion(baseUrl, apiKey, body, timeoutMs = TASK_WORKER_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const done = log.startTimer();
-  log.debug('chat completion request', {
-    baseUrl,
-    model: body?.model,
-    messages: Array.isArray(body?.messages) ? body.messages.length : 0,
-    tools: Array.isArray(body?.tools) ? body.tools.length : 0,
-  });
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      log.error('chat completion failed', { model: body?.model, status: response.status, ms: done() });
-      throw new Error(`${response.status}: ${err}`);
-    }
-    const data = await response.json();
-    log.info('chat completion ok', {
+  return callModel({
+    config: {
+      provider: null,
       model: body?.model,
-      ms: done(),
-      finishReason: data?.choices?.[0]?.finish_reason,
-      promptTokens: data?.usage?.prompt_tokens,
-      completionTokens: data?.usage?.completion_tokens,
-    });
-    return data;
-  } catch (err) {
-    if (err.name === 'AbortError') log.error('chat completion timed out', { model: body?.model, timeoutMs, ms: done() });
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+      baseUrl,
+      apiKey,
+    },
+    body,
+    timeoutMs,
+    logContext: {
+      source: 'legacy-fetchChatCompletion',
+    },
+  });
 }
 
 export function extractMessageText(content) {
@@ -92,6 +69,8 @@ export function publicToolActions(toolActions) {
     ms: action.ms,
     round: action.round,
     result_chars: action.result_chars,
+    ...(typeof action.ok === 'boolean' ? { ok: action.ok } : {}),
+    ...(action.summary ? { summary: action.summary } : {}),
   }));
 }
 
@@ -103,6 +82,7 @@ export function publicTimings(timings) {
       ms: action.ms,
       round: action.round,
       result_chars: action.result_chars,
+      ...(typeof action.ok === 'boolean' ? { ok: action.ok } : {}),
     })),
   };
 }

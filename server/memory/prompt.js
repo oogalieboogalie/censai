@@ -1,5 +1,8 @@
 import { embeddingsAvailable } from '../embeddings.js';
 import { loadAgentContext, recallMemories, loadCapabilities } from './core.js';
+import pool from '../db.js';
+import { compilePromptTemplate } from './promptCompiler.js';
+import { buildSubAgentRosterPrompt } from './subagentRoster.js';
 
 const TOOL_AUTONOMY_CONTRACT = [
   '',
@@ -22,8 +25,27 @@ export async function buildSystemPrompt(agentId, currentMessage) {
           unreadMessages, nuggets, journalEntries, knowledgeTriples,
           topAssociations } = ctx;
 
-  let prompt = agent.system_prompt || `You are ${agent.name}. ${agent.role || ''}`;
+  // Load equipped attributes from database
+  let equippedAttributes = {};
+  try {
+    const { rows } = await pool.query(
+      `SELECT a.id, a.value 
+       FROM attributes a
+       JOIN agent_attributes aa ON a.id = aa.attribute_id
+       WHERE aa.agent_id = $1`,
+      [agentId]
+    );
+    rows.forEach(r => {
+      equippedAttributes[r.id] = r.value;
+    });
+  } catch (err) {
+    console.error('Failed to load equipped attributes for prompt compiler:', err.message);
+  }
+
+  const template = agent.system_prompt || `You are ${agent.name}. ${agent.role || ''}`;
+  let prompt = compilePromptTemplate(template, equippedAttributes);
   prompt += TOOL_AUTONOMY_CONTRACT;
+  prompt += `\n\n${await buildSubAgentRosterPrompt(agentId)}`;
 
   // Tools are sent via the API's function calling — no need to describe them in the prompt.
   const capabilities = await loadCapabilities(agentId);

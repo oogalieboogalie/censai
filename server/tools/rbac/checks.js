@@ -1,6 +1,8 @@
 import pool from '../../db.js';
 import { getAgent, getSubAgentById } from '../../memory.js';
 import { TOOL_DEFINITIONS } from '../definitions.js';
+import { CAPABILITY_TO_TOOLS } from './capabilities.js';
+import { TOOL_DISCOVERY_NAMES } from '../definitions/discovery.js';
 import { 
   AGENT_CLASS_TOOL_WHITELIST, 
   SUB_AGENT_TOOL_WHITELIST, 
@@ -30,33 +32,46 @@ export async function filterToolsForAgent(agentId) {
   try {
     const sub = await getSubAgentById(agentId);
     let toolScopes = null;
+    let allowedDefaults = [];
+
     if (sub) {
       const classList = sub.class ? AGENT_CLASS_TOOL_WHITELIST[sub.class] : null;
       const tierList = SUB_AGENT_TOOL_WHITELIST[sub.permission || 'worker'];
-      const allowed = new Set(classList || tierList || []);
-      matched = TOOL_DEFINITIONS.filter(t => allowed.has(t.function.name));
+      allowedDefaults = classList || tierList || [];
       toolScopes = sub.tool_scopes;
     } else if (FULL_TOOL_ACCESS_AGENT_IDS.has(agentId)) {
-      matched = TOOL_DEFINITIONS;
+      allowedDefaults = TOOL_DEFINITIONS.map(t => t.function.name);
     } else if (CORE_AGENT_TOOL_WHITELIST[agentId]) {
-      const allowed = new Set(CORE_AGENT_TOOL_WHITELIST[agentId]);
-      matched = TOOL_DEFINITIONS.filter(t => allowed.has(t.function.name));
+      allowedDefaults = CORE_AGENT_TOOL_WHITELIST[agentId];
       const agent = await getAgent(agentId);
       toolScopes = agent?.tool_scopes;
     } else {
       const agent = await getAgent(agentId);
       toolScopes = agent?.tool_scopes;
-      const selectedTools = Array.isArray(toolScopes?.tools) ? toolScopes.tools.filter(Boolean) : [];
-      if (agent && toolScopes?.mode === 'custom' && selectedTools.length > 0) {
-        matched = TOOL_DEFINITIONS.filter(t => selectedTools.includes(t.function.name));
-        return matched.map(({ type, function: fn }) => ({ type, function: fn }));
-      }
-      const allowed = new Set([
+      allowedDefaults = [
         'remember', 'recall', 'feeling', 'message_to', 'read_messages',
         'project_read', 'project_list', 'read_brief', 'report'
-      ]);
-      matched = TOOL_DEFINITIONS.filter(t => allowed.has(t.function.name));
+      ];
     }
+
+    // Fetch persisted capabilities from database
+    let additionalTools = [];
+    try {
+      const capRes = await pool.query(
+        'SELECT capability_id, mode FROM agent_capabilities WHERE agent_id = $1',
+        [agentId]
+      );
+      const activeCaps = capRes.rows.filter(r => r.mode === 'execute_with_approval' || r.mode === 'autonomous');
+      for (const cap of activeCaps) {
+        const tools = CAPABILITY_TO_TOOLS[cap.capability_id] || [];
+        additionalTools.push(...tools);
+      }
+    } catch (dbErr) {
+      console.warn(`[Capabilities] Failed to fetch capabilities for agent ${agentId}:`, dbErr.message);
+    }
+
+    const allowed = new Set([...allowedDefaults, ...additionalTools]);
+    matched = TOOL_DEFINITIONS.filter(t => allowed.has(t.function.name));
 
     const selectedTools = Array.isArray(toolScopes?.tools) ? toolScopes.tools.filter(Boolean) : [];
     if (toolScopes?.mode === 'custom' && selectedTools.length > 0) {
@@ -71,6 +86,7 @@ export async function filterToolsForAgent(agentId) {
       matched = appendToolsByName(matched, TASK_SUBMISSION_GATED_TOOLS);
     }
   } catch {}
-  
+
+  matched = appendToolsByName(matched, TOOL_DISCOVERY_NAMES);
   return matched.map(({ type, function: fn }) => ({ type, function: fn }));
 }

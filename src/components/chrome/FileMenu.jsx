@@ -1,26 +1,18 @@
 import React from 'react';
 import { MenuItem, MenuSep } from './Buttons.jsx';
+import { ProjectSelector } from './ProjectSelector.jsx';
 
 export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProject, presets = [], onSaveAsPreset, onLoadPreset, onDeletePreset, onNewTerminal, onNewHtmlPreview, onSpawnRook, onNewMailcow, onNewVex }) {
   const [savingPreset, setSavingPreset] = React.useState(false);
-  const [openingProject, setOpeningProject] = React.useState(false);
   const [presetName, setPresetName] = React.useState('');
-  const [projectPath, setProjectPath] = React.useState(currentProject?.path || '');
-  const [projectNameInput, setProjectNameInput] = React.useState(currentProject?.name || '');
-  const [projectError, setProjectError] = React.useState('');
   const saveInputRef = React.useRef(null);
-  const projectInputRef = React.useRef(null);
 
   React.useEffect(() => {
     if (savingPreset) setTimeout(() => saveInputRef.current?.focus(), 30);
   }, [savingPreset]);
 
-  React.useEffect(() => {
-    if (openingProject) setTimeout(() => projectInputRef.current?.focus(), 30);
-  }, [openingProject]);
-
   const exportWorkspace = () => {
-    const data = localStorage.getItem('censai.workspace.v1');
+    const data = localStorage.getItem('homebase.workspace.v1');
     if (!data) { alert('No workspace data to export.'); return; }
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -33,7 +25,7 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
   };
 
   const aboutCensai = () => {
-    alert('Censai\n\nAn infinite canvas for you and your agents.\nBuilt by Alex at Censai Systems.\n\n· Drag agents onto windows to assign them\n· Rubber-band a region to plan\n· Edit system prompts to shape behavior');
+    alert('Censai\n\nAn infinite canvas for you and your agents.\nBuilt by Alex.\n\n· Drag agents onto windows to assign them\n· Rubber-band a region to plan\n· Edit system prompts to shape behavior');
     onClose();
   };
 
@@ -47,55 +39,16 @@ export function FileMenu({ onClose, projectName, currentProject, onOpenLocalProj
 
   const sortedPresets = [...presets].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
-  const commitOpenProject = async () => {
-    const path = projectPath.trim();
-    if (!path) return;
-    setProjectError('');
-    try {
-      await onOpenLocalProject?.({
-        path,
-        name: projectNameInput.trim() || undefined,
-      });
-      setOpeningProject(false);
-      onClose();
-    } catch (err) {
-      setProjectError(err.message || 'Failed to open project');
-    }
-  };
-
   return <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
     <div data-canvas-ui style={{ position: 'absolute', top: 44, left: 8, zIndex: 70, background: 'var(--surface)', border: '1px solid var(--hairline)', borderRadius: 12, padding: 6, minWidth: 240, boxShadow: 'var(--shadow-pop)' }}>
       <div style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{projectName || 'Untitled'}</div>
 
-      <MenuItem label="Open local project…" onClick={() => setOpeningProject(true)} />
-      {openingProject && (
-        <div style={{ padding: '6px 8px 8px', display: 'grid', gap: 6 }}>
-          <input
-            ref={projectInputRef}
-            value={projectPath}
-            onChange={e => setProjectPath(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitOpenProject();
-              if (e.key === 'Escape') { setOpeningProject(false); setProjectError(''); }
-            }}
-            placeholder="C:\path\to\your\project"
-            style={{ all: 'unset', border: '1px solid var(--hairline)', background: 'var(--surface-2)', borderRadius: 6, padding: '6px 8px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink)' }}
-          />
-          <input
-            value={projectNameInput}
-            onChange={e => setProjectNameInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitOpenProject();
-              if (e.key === 'Escape') { setOpeningProject(false); setProjectError(''); }
-            }}
-            placeholder="Project name (optional)"
-            style={{ all: 'unset', border: '1px solid var(--hairline)', background: 'var(--surface-2)', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: 'var(--ink)' }}
-          />
-          {projectError && <div style={{ color: 'var(--ps-red)', fontSize: 11, lineHeight: 1.35 }}>{projectError}</div>}
-          <button onClick={commitOpenProject} disabled={!projectPath.trim()} style={{ all: 'unset', cursor: projectPath.trim() ? 'pointer' : 'not-allowed', padding: '7px 10px', borderRadius: 7, background: 'var(--accent)', color: 'white', fontSize: 11, fontWeight: 700, textAlign: 'center', opacity: projectPath.trim() ? 1 : 0.45 }}>Use this folder</button>
-        </div>
-      )}
+      <ProjectSelector
+        currentProject={currentProject}
+        onOpenLocalProject={onOpenLocalProject}
+        onClose={onClose}
+      />
       {currentProject?.path && (
         <div style={{ padding: '0 10px 6px', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink-faint)', lineHeight: 1.35, wordBreak: 'break-all' }}>
           Current root: {currentProject.path}

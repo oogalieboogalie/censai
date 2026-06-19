@@ -12,6 +12,8 @@ export const CanvasShell = React.forwardRef(function CanvasShell({
   isPanning,
   children,
   fixedChildren,
+  overlayChildren,
+  onCanvasContextMenu,
 }, ref) {
   const dotSize = 24 * zoom;
   const dotRadius = Math.max(0.6, Math.min(1.4, 1 * zoom));
@@ -28,7 +30,10 @@ export const CanvasShell = React.forwardRef(function CanvasShell({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onCanvasContextMenu?.(e);
+      }}
       style={{
         position: 'absolute',
         inset: 0,
@@ -59,6 +64,24 @@ export const CanvasShell = React.forwardRef(function CanvasShell({
         {children}
       </div>
       {fixedChildren}
+      {overlayChildren && (
+        <div
+          data-canvas-overlay
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            transformOrigin: '0 0',
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            width: 0,
+            height: 0,
+            overflow: 'visible',
+            zIndex: 120,
+          }}
+        >
+          {overlayChildren}
+        </div>
+      )}
     </div>
   );
 });

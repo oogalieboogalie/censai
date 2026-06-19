@@ -54,7 +54,7 @@ export function GenImageWindow({ win, onUpdate }) {
   const handleDragStart = React.useCallback((e) => {
     if (!generatedImage) return;
     // Use both custom MIME and plain text fallback for better browser support
-    e.dataTransfer.setData('application/x-censai-image', generatedImage);
+    e.dataTransfer.setData('application/x-homebase-image', generatedImage);
     e.dataTransfer.setData('text/plain', generatedImage);
     e.dataTransfer.effectAllowed = 'copy';
     setDragImage(true);

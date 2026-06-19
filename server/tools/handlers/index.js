@@ -22,8 +22,13 @@ import { handleDispatchTool } from './dispatch.js';
 import { handleSheetsTool } from './sheets.js';
 import { handleMailcowTool } from './mailcow.js';
 import { handleVexTool } from './vex.js';
+import { handleToolDiscovery } from './discovery.js';
 
 export const TOOL_REGISTRY = {
+  // Tool discovery
+  'search_tools': handleToolDiscovery,
+  'get_tool': handleToolDiscovery,
+
   // Calendar
   'read_calendar': handleCalendarTool,
   'add_calendar_event': handleCalendarTool,

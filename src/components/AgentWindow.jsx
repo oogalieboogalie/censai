@@ -6,6 +6,8 @@ import { Stat, JournalCard, PillBtn } from './agent/AgentStats.jsx';
 import { AgentEditor } from './agent/AgentEditor.jsx';
 import { useAgentWindow } from './agent/useAgentWindow.js';
 import { defaultToolsForAgent } from './agent/AgentData.js';
+import { useAgentActivity } from './agent/useAgentActivity.js';
+import { AgentActivityCard } from './agent/AgentActivityCard.jsx';
 
 export function AgentWindow({ win, onUpdate, onSpawn }) {
   const {
@@ -22,6 +24,7 @@ export function AgentWindow({ win, onUpdate, onSpawn }) {
   } = useAgentWindow(win, onUpdate);
 
   const [journalCount, setJournalCount] = React.useState(0);
+  const activity = useAgentActivity(agent?.id);
   React.useEffect(() => {
     if (!agent?.id) return;
     let alive = true;
@@ -52,6 +55,7 @@ export function AgentWindow({ win, onUpdate, onSpawn }) {
           <Stat label="Tools" value={defaultToolsForAgent(agent).length} />
           <JournalCard agent={agent} count={journalCount} />
         </div>
+        <AgentActivityCard activity={activity} />
         <div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>System</div>
           {editing ? (

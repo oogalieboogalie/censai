@@ -1,6 +1,8 @@
 import React from 'react';
 import { getCanvasObjectRenderer, GenericCanvasObjectWindow } from '../lib/canvasObjectRegistry.jsx';
 import { getCanvasObjectType, legacyKindForCanvasType } from '../lib/canvasObjectTypes.js';
+import { WindowLazyErrorBoundary } from './windows/WindowLazyErrorBoundary.jsx';
+import { WindowSuspenseFallback } from './windows/WindowSuspenseFallback.jsx';
 
 export const CanvasObjectRenderer = React.memo(({
   canvasObject,
@@ -21,13 +23,17 @@ export const CanvasObjectRenderer = React.memo(({
   };
 
   return (
-    <Renderer
-      {...rendererProps}
-      canvasObject={canvasObject}
-      win={win}
-      type={type}
-      onUpdate={onUpdate}
-    />
+    <WindowLazyErrorBoundary win={win} type={type}>
+      <React.Suspense fallback={<WindowSuspenseFallback />}>
+        <Renderer
+          {...rendererProps}
+          canvasObject={canvasObject}
+          win={win}
+          type={type}
+          onUpdate={onUpdate}
+        />
+      </React.Suspense>
+    </WindowLazyErrorBoundary>
   );
 });
 

@@ -16,7 +16,7 @@ export async function createIssue(req, res) {
         'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
-        'User-Agent': 'Censai-App'
+        'User-Agent': 'Homebase-App'
       },
       body: JSON.stringify({
         title,

@@ -9,7 +9,7 @@ export const postgresTools = [
     type: 'function',
     function: {
       name: 'db_inspect',
-      description: 'Inspect the Censai database schema. List all tables, describe columns and data types for a specific table, or view indexes and constraints. Essential for understanding what Nexus built.',
+      description: 'Inspect the Homebase database schema. List all tables, describe columns and data types for a specific table, or view indexes and constraints. Essential for understanding what Nexus built.',
       parameters: {
         type: 'object',
         properties: {
@@ -51,7 +51,7 @@ export const postgresTools = [
     type: 'function',
     function: {
       name: 'postgres_query',
-      description: 'Run SQL against the Censai Postgres database. SELECT/WITH/SHOW/EXPLAIN are read-only by default. Mutations require allow_write=true; DROP/TRUNCATE and other dangerous operations also require allow_unsafe=true.',
+      description: 'Run SQL against the Homebase Postgres database. SELECT/WITH/SHOW/EXPLAIN are read-only by default. Mutations require allow_write=true; DROP/TRUNCATE and other dangerous operations also require allow_unsafe=true.',
       parameters: {
         type: 'object',
         properties: {
@@ -91,7 +91,7 @@ export const postgresTools = [
     type: 'function',
     function: {
       name: 'postgres_exec_file',
-      description: 'Execute a local .sql file from this repo against Censai Postgres. Use dry_run=true to preview. Mutating files require allow_write=true; destructive files also require allow_unsafe=true.',
+      description: 'Execute a local .sql file from this repo against Homebase Postgres. Use dry_run=true to preview. Mutating files require allow_write=true; destructive files also require allow_unsafe=true.',
       parameters: {
         type: 'object',
         properties: {

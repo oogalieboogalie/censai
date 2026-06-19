@@ -71,6 +71,7 @@ export const AGENT_CLASS_TOOL_WHITELIST = {
 export const CORE_AGENT_TOOL_WHITELIST = {
   atlas: [
     'remember', 'recall', 'feeling', 'message_to', 'read_messages',
+    'list_sub_agents', 'submit_agent_task', 'dispatch_squad', 'squad_status',
     'project_read', 'project_file_outline', 'project_list', 'project_write', 'project_edit', 'project_multi_edit',
     'read_brief', 'refresh_brief', 'report',
     'run_tests', 'run_linter', 'sandbox_exec', 'terminal_run', 'http_test', 'task_done',
@@ -82,6 +83,7 @@ export const CORE_AGENT_TOOL_WHITELIST = {
   ],
   genesis: [
     'remember', 'recall', 'feeling', 'message_to', 'read_messages',
+    'list_sub_agents', 'submit_agent_task', 'dispatch_squad', 'squad_status',
     'project_read', 'project_file_outline', 'project_list', 'project_write', 'project_edit',
     'read_brief', 'report', 'generate_image', 'set_canvas_hue',
     'vex_run', 'vex_status', 'vex_list_agents',
@@ -109,6 +111,7 @@ export const CORE_AGENT_TOOL_WHITELIST = {
   ],
   architect: [
     'remember', 'recall', 'feeling', 'message_to', 'read_messages',
+    'list_sub_agents', 'submit_agent_task',
     'project_read', 'project_file_outline', 'project_list',
     'project_write', 'project_edit', 'project_multi_edit',
     'read_brief', 'refresh_brief', 'report',

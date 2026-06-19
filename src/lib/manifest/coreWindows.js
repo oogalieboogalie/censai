@@ -21,10 +21,6 @@ export const CORE_WINDOW_MANIFESTS = [
     componentPath: 'src/components/GroupChatWindow.jsx',
     defaultSize: { w: 420, h: 540 },
     launcher: { show: true, order: 20, icon: 'Group', label: 'Group chat', hint: 'multiple agents' },
-    // Renderable in 3D: the live transcript (already store-resident as `msgs`)
-    // serialized into a "from: text" body. The Code-in-3D sink renders via the
-    // async worker path with wrapping disabled, so long messages can't lock the UI.
-    glyphSource: { fields: ['msgs'], format: 'chat', filename: 'transcript.md' },
   },
   {
     kind: 'todos',

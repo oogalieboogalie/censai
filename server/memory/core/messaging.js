@@ -1,4 +1,5 @@
 import pool from '../../db.js';
+import { enqueueAgentWakeup, shouldWakeForMessage } from '../../agent-wakeups/store.js';
 
 export async function sendAgentMessage(fromAgent, toAgent, content, opts = {}) {
   const priority = opts.priority || 'normal';
@@ -15,7 +16,11 @@ export async function sendAgentMessage(fromAgent, toAgent, content, opts = {}) {
     [fromAgent, toAgent, content, priority, threadId, subject, messageType,
      importanceScore, autoEscalate, !threadId]
   );
-  return rows[0].id;
+  const messageId = rows[0].id;
+  if (shouldWakeForMessage(fromAgent, toAgent, opts)) {
+    await enqueueAgentWakeup(messageId, toAgent, fromAgent);
+  }
+  return messageId;
 }
 
 export async function getAgentMessages(agentId, unreadOnly = false) {

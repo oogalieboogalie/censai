@@ -24,7 +24,7 @@ export async function browseDir(req, res) {
 
   try {
     const r = await fetch(url, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-App' }
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-App' }
     });
     if (!r.ok) {
       const err = await r.text();
@@ -75,7 +75,7 @@ export async function getTree(req, res) {
 
   const fetchTree = async (b) => {
     const r = await fetch(`https://api.github.com/repos/${repo}/git/trees/${b}?recursive=1`, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Censai-App' }
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-App' }
     });
     if (!r.ok) return null;
     return await r.json();

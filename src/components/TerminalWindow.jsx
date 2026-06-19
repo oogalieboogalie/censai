@@ -4,13 +4,13 @@ import { DEFAULT_THEME } from './windows/WindowThemePanel.jsx';
 import { useTerminal } from './terminal/useTerminal.js';
 import { TerminalHeader, TerminalToolbar } from './terminal/TerminalUI.jsx';
 
-export function TerminalWindow({ win, onUpdate, currentProject }) {
+export function TerminalWindow({ win, onUpdate, currentProject, zoom = 1 }) {
   const hostRef = useRef(null);
   const cwd = win.cwd || currentProject?.path || '';
   const agentEnabled = Boolean(win.agentEnabled);
   const [projects, setProjects] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
-  const theme = win.terminalTheme || { ...DEFAULT_THEME };
+  const theme = win.terminalTheme || DEFAULT_THEME;
 
   const handleThemeChange = useCallback((newTheme) => {
     onUpdate({ terminalTheme: newTheme });
@@ -60,17 +60,34 @@ export function TerminalWindow({ win, onUpdate, currentProject }) {
         ref={hostRef}
         onPointerDown={(event) => {
           event.stopPropagation();
-          if (!window.getSelection().toString()) {
-            termRef.current?.focus();
-          }
+          termRef.current?.focus();
+        }}
+        onPointerMove={(event) => {
+          event.stopPropagation();
+        }}
+        onPointerUp={(event) => {
+          event.stopPropagation();
+        }}
+        onContextMenu={(event) => {
+          event.stopPropagation();
+        }}
+        onPaste={(event) => {
+          event.preventDefault();
+          const text = event.clipboardData?.getData('text');
+          if (text && termRef.current) termRef.current.paste(text);
         }}
         style={{
           flex: 1,
           minHeight: 0,
-          padding: 8,
+          padding: 0,
           background: theme.background,
           overflow: 'hidden',
           cursor: 'text',
+          userSelect: 'text',
+          WebkitUserSelect: 'text',
+          MozUserSelect: 'text',
+          msUserSelect: 'text',
+          zoom: 1,
         }}
       />
     </>

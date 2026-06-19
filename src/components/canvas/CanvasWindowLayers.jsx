@@ -1,10 +1,15 @@
 import React from 'react';
-import { CanvasObjectRenderer } from './CanvasRenderer.jsx';
-import { WindowFrame } from '../Windows.jsx';
+import { WindowFrame } from '../windows/WindowFrame.jsx';
+import { WindowSuspenseFallback } from '../windows/WindowSuspenseFallback.jsx';
+
+const CanvasObjectRenderer = React.lazy(() => import('./CanvasRenderer.jsx').then((mod) => ({
+  default: mod.CanvasObjectRenderer,
+})));
 
 const RenderedWindow = React.memo(({
   win,
   activeId,
+  selectedIds = [],
   zoom,
   pan = { x: 0, y: 0 },
   allWins,
@@ -26,6 +31,7 @@ const RenderedWindow = React.memo(({
     <WindowFrame
       win={win}
       isActive={activeId === win.id}
+      isSelected={selectedIds.includes(win.id)}
       zoom={zoom}
       pan={pan}
       allWins={allWins}
@@ -37,25 +43,27 @@ const RenderedWindow = React.memo(({
       onWireEnd={onWireEnd}
       onSelect={(e) => {
         if (e && e.stopPropagation) e.stopPropagation();
-        onSelect(win.id);
+        onSelect(win.id, e);
       }}
     >
-      <CanvasObjectRenderer
-        canvasObject={win}
-        isActive={activeId === win.id}
-        pan={pan}
-        zoom={zoom}
-        wins={allWins}
-        allWins={allWins}
-        canvasGroups={canvasGroups}
-        currentProject={getProjectContext(win)}
-        groups={groups}
-        onUpdate={(patch) => onUpdate(win.id, patch)}
-        onSpawn={onSpawn}
-        onSelect={onSelect}
-        onCreateAgent={onCreateAgent}
-        onAssign={win.kind === 'doc' ? onAssign : undefined}
-      />
+      <React.Suspense fallback={<WindowSuspenseFallback />}>
+        <CanvasObjectRenderer
+          canvasObject={win}
+          isActive={activeId === win.id}
+          pan={pan}
+          zoom={zoom}
+          wins={allWins}
+          allWins={allWins}
+          canvasGroups={canvasGroups}
+          currentProject={getProjectContext(win)}
+          groups={groups}
+          onUpdate={(patch) => onUpdate(win.id, patch)}
+          onSpawn={onSpawn}
+          onSelect={onSelect}
+          onCreateAgent={onCreateAgent}
+          onAssign={win.kind === 'doc' ? onAssign : undefined}
+        />
+      </React.Suspense>
     </WindowFrame>
   );
 });

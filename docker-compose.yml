@@ -3,9 +3,9 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: censai
-      POSTGRES_PASSWORD: censai
-      POSTGRES_DB: censai
+      POSTGRES_USER: homebase
+      POSTGRES_PASSWORD: homebase
+      POSTGRES_DB: homebase
     volumes:
       - pgdata18root:/var/lib/postgresql
       - ./docker/init.sql:/docker-entrypoint-initdb.d/001-init.sql
@@ -26,10 +26,11 @@ services:
       - ./docker/016-schedules.sql:/docker-entrypoint-initdb.d/016-schedules.sql
       - ./docker/017-jules-task-sync.sql:/docker-entrypoint-initdb.d/017-jules-task-sync.sql
       - ./docker/018-agent-task-receipts.sql:/docker-entrypoint-initdb.d/018-agent-task-receipts.sql
+      - ./docker/019-operational-intelligence.sql:/docker-entrypoint-initdb.d/019-operational-intelligence.sql
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U censai"]
+      test: ["CMD-SHELL", "pg_isready -U homebase"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -48,7 +49,7 @@ services:
       timeout: 3s
       retries: 5
 
-  hub:
+  homebase:
     build: .
     restart: unless-stopped
     logging:
@@ -61,10 +62,10 @@ services:
     ports:
       - "3002:3001"
     volumes:
-      - censai_state:/app/.censai-state
+      - homebase_state:/app/.homebase-state
       - .:/workspace/CensaiHub:ro
     environment:
-      DATABASE_URL: postgresql://censai:censai@postgres:5432/censai
+      DATABASE_URL: postgresql://homebase:homebase@postgres:5432/homebase
       QDRANT_URL: http://qdrant:6333
       AI_BASE_URL: http://host.docker.internal:11434/v1
       AI_API_KEY: ollama
@@ -74,16 +75,20 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       COHERE_API_KEY: ${COHERE_API_KEY:-}
+      COHERE_PAID_API_KEY: ${COHERE_PAID_API_KEY:-}
+      COHERE_NON_COMMERCIAL_KEY: ${COHERE_NON_COMMERCIAL_KEY:-}
+      COHERE_CHAT_BASE_URL: ${COHERE_CHAT_BASE_URL:-https://api.cohere.ai/compatibility/v1}
       COHERE_BASE_URL: ${COHERE_BASE_URL:-}
       COHERE_EMBEDDING_DIMENSION: ${COHERE_EMBEDDING_DIMENSION:-}
       APP_ORIGIN: http://localhost:3002
       GOOGLE_REDIRECT_URI: http://localhost:3002/api/auth/google/callback
       PORT: 3001
       NODE_ENV: production
+      HOMEBASE_MODE: ${HOMEBASE_MODE:-local_desktop}
       # Optional host<->container path mapping for the terminal/runner.
       # Set these if you mount a host project directory into the container.
-      # CENSAI_HOST_PROJECT_ROOT: /path/to/your/project
-      # CENSAI_CONTAINER_PROJECT_ROOT: /workspace/project
+      # HOMEBASE_HOST_PROJECT_ROOT: /path/to/your/project
+      # HOMEBASE_CONTAINER_PROJECT_ROOT: /workspace/project
       RUNNER_ENABLED: "true"
       RUNNER_URL: http://runner:3003
     depends_on:
@@ -105,12 +110,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace/CensaiHub
-    # Port 3003 is intentionally NOT published to the host.
-    # The hub container reaches the runner via Docker's internal network (runner:3003).
-    # Exposing this port externally would make an arbitrary-execution service
-    # reachable on the host network.
+    ports:
+      - "3003:3003"
 
 volumes:
   pgdata18root:
   qdrant_data:
-  censai_state:
+  homebase_state:

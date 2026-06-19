@@ -52,6 +52,7 @@ export const Icon = {
   Video: (p) => <I {...p}><rect x="2" y="6" width="16" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></I>,
   Server: (p) => <I {...p}><rect x="2" y="4" width="20" height="6" rx="2"/><rect x="2" y="14" width="20" height="6" rx="2"/><path d="M6 7h.01M6 17h.01"/></I>,
   Play: (p) => <I {...p}><path d="M5 3l14 9-14 9z"/></I>,
+  Edit: (p) => <I {...p}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></I>,
 };
 
 export function ImageIcon({ size = 14 }) {

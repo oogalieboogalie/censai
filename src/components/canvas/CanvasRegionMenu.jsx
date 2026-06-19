@@ -1,14 +1,19 @@
 import React from 'react';
-import { Icon } from '../Icons.jsx';
 import { AgentAvatar } from '../Agents.jsx';
 import { getAgents } from '../../lib/agentStore.js';
 import { CanvasFitPrompt } from './CanvasFitPrompt.jsx';
 import { buildRegionMenuItems } from './CanvasRegionItems.jsx';
+import { buildFavoriteRailItems, getFavoriteableItems, getRailOffsets, SidebarFavoritesPopover } from './CanvasRegionFavorites.jsx';
+import { useWorkspaceStore } from '../../lib/store.js';
 
-export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPickIdea, onPickPlan, onPickGroup, onPickChat, onPickGroupChat, onPickWorkflow, onPickCodeEditor, onPickHtmlPreview, onPickAgent, onPickImage, onPickBrowser, onPickFiles, onPickCalendar, onPickScheduler, onPickOperations, onPickMusic, onPickStream, onPickExoSkeleton, onPickOverseer, onShare, onDownload }) {
+export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPickIdea, onPickPlan, onPickGroup, onPickChat, onPickGroupChat, onPickWorkflow, onPickCodeEditor, onPickHtmlPreview, onPickAgent, onPickImage, onPickBrowser, onPickFiles, onPickCalendar, onPickOperations, onPickScheduler, onPickMusic, onPickStream, onPickExoSkeleton, onPickOverseer, onShare, onDownload }) {
   const [hovered, setHovered] = React.useState(null);
   const [chatPickerOpen, setChatPickerOpen] = React.useState(false);
+  const [customizeOpen, setCustomizeOpen] = React.useState(false);
   const [fitDismissed, setFitDismissed] = React.useState(false);
+
+  const { sidebarFavorites = [], setSidebarFavorites } = useWorkspaceStore();
+
   const railWidth = 36 / zoom;
   const btnSize = 30 / zoom;
   const gap = 2 / zoom;
@@ -17,11 +22,48 @@ export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPi
   const agents = getAgents();
   const showFitPrompt = neighbor && !fitDismissed;
 
-  const items = buildRegionMenuItems({ onPickPlan, onPickIdea, onPickGroupChat, onPickFiles, onPickCodeEditor, onPickHtmlPreview, onPickWorkflow, onPickImage, onPickBrowser, onPickCalendar, onPickOperations, onPickScheduler, onPickGroup, onPickMusic, onPickStream, onPickExoSkeleton, onPickOverseer, onPickAgent, onShare, onDownload, setChatPickerOpen });
+  const allItems = buildRegionMenuItems({
+    onPickPlan,
+    onPickIdea,
+    onPickGroupChat,
+    onPickFiles,
+    onPickCodeEditor,
+    onPickHtmlPreview,
+    onPickWorkflow,
+    onPickImage,
+    onPickBrowser,
+    onPickCalendar,
+    onPickOperations,
+    onPickScheduler,
+    onPickGroup,
+    onPickMusic,
+    onPickStream,
+    onPickExoSkeleton,
+    onPickOverseer,
+    onPickAgent,
+    onShare,
+    onDownload,
+    setChatPickerOpen: (val) => {
+      setChatPickerOpen(val);
+      if (val) setCustomizeOpen(false);
+    }
+  });
+
+  const favoriteableItems = getFavoriteableItems(allItems);
+  const railItems = buildFavoriteRailItems({
+    allItems,
+    favoriteableItems,
+    sidebarFavorites,
+    onCustomize: () => {
+      setCustomizeOpen(v => !v);
+      setChatPickerOpen(false);
+    }
+  });
+  const offsets = getRailOffsets({ railItems, pad, btnSize, gap, zoom });
 
   return <>
     {/* dismiss backdrop */}
-    <div onClick={onCancel} style={{ position: 'absolute', left: -10000, top: -10000, width: 100000, height: 100000, zIndex: 60 }} />
+    <div data-canvas-context-surface onClick={onCancel} style={{ position: 'absolute', left: -10000, top: -10000, width: 100000, height: 100000, zIndex: 60 }} />
     {/* region highlight */}
     <div style={{ position: 'absolute', left: rect.x, top: rect.y, width: rect.w, height: rect.h, border: `${1.5 / zoom}px solid oklch(var(--accent-l) calc(var(--accent-c) * 0.8) var(--accent-h))`, background: 'oklch(var(--accent-l) calc(var(--accent-c) * 0.8) var(--accent-h) / 0.06)', borderRadius: 12 / zoom, pointerEvents: 'none', zIndex: 61 }} />
     <CanvasFitPrompt
@@ -54,23 +96,23 @@ export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPi
         scrollbarWidth: 'none',
         overscrollBehavior: 'contain',
       }}>
-        {items.map(item => {
+        {railItems.map(item => {
           if (item.sep) return <div key={item.id} style={{ height: 1 / zoom, background: 'var(--hairline)', margin: `${1 / zoom}px ${4 / zoom}px`, flexShrink: 0 }} />;
           const isHovered = hovered === item.id;
           return (
             <button key={item.id} onClick={item.onClick}
-              onMouseEnter={() => setHovered(item.id)}
-              onMouseLeave={() => setHovered(null)}
-              style={{
-                all: 'unset', cursor: 'pointer',
-                width: btnSize, height: btnSize,
-                borderRadius: 6 / zoom,
-                display: 'grid', placeItems: 'center',
-                color: item.accent ? 'var(--accent-ink)' : 'var(--ink-soft)',
-                background: isHovered ? 'var(--accent-soft)' : 'transparent',
-                transition: 'background 0.12s, color 0.12s',
-                flexShrink: 0,
-              }}>
+               onMouseEnter={() => setHovered(item.id)}
+               onMouseLeave={() => setHovered(null)}
+               style={{
+                 all: 'unset', cursor: 'pointer',
+                 width: btnSize, height: btnSize,
+                 borderRadius: 6 / zoom,
+                 display: 'grid', placeItems: 'center',
+                 color: item.accent ? 'var(--accent-ink)' : 'var(--ink-soft)',
+                 background: isHovered ? 'var(--accent-soft)' : 'transparent',
+                 transition: 'background 0.12s, color 0.12s',
+                 flexShrink: 0,
+               }}>
               <span style={{ transform: `scale(${1 / zoom})`, display: 'flex' }}>{item.icon}</span>
             </button>
           );
@@ -78,10 +120,9 @@ export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPi
       </div>
       {/* tooltip — rendered outside the scrollable container so it's never clipped */}
       {hovered && (() => {
-        const item = items.find(i => i.id === hovered);
+        const item = railItems.find(i => i.id === hovered);
         if (!item || item.sep) return null;
-        const idx = items.filter(i => !i.sep).findIndex(i => i.id === hovered);
-        const itemY = pad + idx * (btnSize + gap) + btnSize / 2;
+        const itemY = offsets[hovered] + btnSize / 2;
         return (
           <div style={{
             position: 'absolute',
@@ -106,14 +147,14 @@ export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPi
           </div>
         );
       })()}
-      {chatPickerOpen && (
+      {chatPickerOpen && offsets['chat'] !== undefined && (
         <div
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             left: railWidth + (8 / zoom),
-            top: pad + 2 * (btnSize + gap),
+            top: offsets['chat'],
             transform: `scale(${1 / zoom})`,
             transformOrigin: 'top left',
             width: 230,
@@ -159,9 +200,16 @@ export function RegionMenu({ rect, zoom, neighbor, onFitNeighbor, onCancel, onPi
           ))}
         </div>
       )}
+      {customizeOpen && offsets['customize'] !== undefined && (
+        <SidebarFavoritesPopover
+          favoriteableItems={favoriteableItems}
+          sidebarFavorites={sidebarFavorites}
+          setSidebarFavorites={setSidebarFavorites}
+          railWidth={railWidth}
+          top={offsets['customize']}
+          zoom={zoom}
+        />
+      )}
     </div>
   </>;
 }
-
-
-

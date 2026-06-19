@@ -94,7 +94,11 @@ export function useThemePanel() {
     }
   };
 
-  const tabs = [{ id: 'appearance', label: 'Appearance' }, { id: 'workspace', label: 'Workspace' }];
+  const tabs = [
+    { id: 'appearance', label: 'Appearance' },
+    { id: 'workspace', label: 'Workspace' },
+    { id: 'vault', label: 'Vault' }
+  ];
 
   const startDividerDrag = (e) => {
     e.preventDefault();

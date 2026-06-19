@@ -4,7 +4,7 @@ export function LocalEmptyState({ pathInput, setPathInput, loadDir }) {
   return (
     <div style={{ padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ color: 'var(--ink-soft)', fontSize: 12, fontFamily: 'var(--font-sans)', lineHeight: 1.4 }}>
-        Paste an absolute folder path on your computer to browse files recursively, drag files to the canvas to spawn docs, and annotations:
+        Paste an absolute folder path on your computer to browse files recursively. Drag files to the canvas to open code in the editor or documents with annotations.
       </div>
       <input
         type="text"

@@ -2,7 +2,7 @@ import pool from '../db.js';
 import { dbReady } from '../dbState.js';
 import { getSecret } from '../secrets.js';
 import { refreshSession as refreshJulesSession } from '../jules.js';
-import { fetchGitHubPullRequestState, syncAgentTaskFromJulesSession } from '../jules-task-sync/index.js';
+import { fetchGitHubPullRequestFiles, fetchGitHubPullRequestState, syncAgentTaskFromJulesSession } from '../jules-task-sync/index.js';
 import { getProject, logProjectActivity } from '../workspaces.js';
 
 const seenReviewIds = new Map();
@@ -44,6 +44,11 @@ export async function tickJulesWatcher() {
               token: githubToken,
             });
             if (prState) {
+              const changedFiles = await fetchGitHubPullRequestFiles({
+                repo: project.repo,
+                prNumber: db.pr_number,
+                token: githubToken,
+              });
               const patched = await pool.query(
                 `UPDATE jules_sessions
                  SET pr_state = $1,
@@ -64,7 +69,7 @@ export async function tickJulesWatcher() {
                 ]
               );
               const syncedSession = patched.rows[0] || db;
-              await syncAgentTaskFromJulesSession(syncedSession);
+              await syncAgentTaskFromJulesSession(syncedSession, { changedFiles });
               if (prState.prState === 'merged' && db.pr_state !== 'merged') {
                 await logProjectActivity(s.project_id, s.agent_id, 'jules_pr_merged', db.pr_url);
               }
@@ -80,7 +85,7 @@ export async function tickJulesWatcher() {
 
             const res = await fetch(
               `https://api.github.com/repos/${project.repo}/pulls/${db.pr_number}/reviews`,
-              { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3+json', 'User-Agent': 'Censai-Agent' } }
+              { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3+json', 'User-Agent': 'Homebase-Agent' } }
             );
             if (res.ok) {
               const reviews = await res.json();

@@ -1,35 +1,18 @@
-import { localApiUrl } from '../helpers.js';
+import { readSheetsInternal, appendSheetsInternal, updateSheetsInternal } from '../../sheets.js';
 
-export async function handleSheetsTool(agentId, name, args) {
+export async function handleSheetsTool(agentId, name, args, context = {}) {
+  const userId = context.userId;
   switch (name) {
     case 'sheets_read_range': {
-      const res = await fetch(localApiUrl('/api/sheets/read'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = await readSheetsInternal(userId, args);
       return JSON.stringify(data.values, null, 2);
     }
     case 'sheets_append_row': {
-      const res = await fetch(localApiUrl('/api/sheets/append'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = await appendSheetsInternal(userId, args);
       return `Successfully appended row. Updated Range: ${data.updatedRange}`;
     }
     case 'sheets_update_cell': {
-      const res = await fetch(localApiUrl('/api/sheets/update'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = await updateSheetsInternal(userId, args);
       return `Successfully updated cell. Cells updated: ${data.updatedCells}`;
     }
     default:

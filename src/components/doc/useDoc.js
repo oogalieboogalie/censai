@@ -1,6 +1,5 @@
 import React from 'react';
 import { getAgentById } from '../../lib/agentStore.js';
-import { sendMessage } from '../../lib/chat.js';
 import { getSelectionOffsets } from './DocUtils.js';
 import { FILE_CONTENTS } from './DocData.js';
 
@@ -155,8 +154,7 @@ export function useDoc(win, onUpdate, onSpawn, onAssign, bodyRef) {
     clearSelection();
     if (kind === 'ask' && agentId && onSpawn) {
       const promptText = `Re: "${ann.quote}"\n\n${body || ''}`;
-      sendMessage(agentId, promptText);
-      onSpawn('chat', { agentId, msgs: [{ from: 'me', text: promptText }] });
+      onSpawn('chat', { agentId, msgs: [{ from: 'me', text: promptText }], autoSend: true });
     }
     if (kind === 'assign' && agentId && onAssign) {
       onAssign({ text: body || ann.quote.slice(0, 60), assignee: agentId, quoted: ann.quote, source: win.filePath || win.fileName });

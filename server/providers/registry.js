@@ -24,7 +24,7 @@ import { INTEGRATION_WINDOW_MANIFESTS } from '../../src/lib/windowManifest.js';
 
 /** Build a credential resolver that reads a single env var (today's model). */
 function envCredential(envName) {
-  return () => getSecret(envName);
+  return async () => getSecret(envName);
 }
 
 // Each adapter:
@@ -40,12 +40,12 @@ const ADAPTERS = {
     secretEnv: 'GITHUB_TOKEN',
     getCredential: envCredential('GITHUB_TOKEN'),
     async test(ctx) {
-      const token = this.getCredential(ctx);
+      const token = await this.getCredential(ctx);
       if (!token) return { ok: false, detail: 'GITHUB_TOKEN not configured' };
       const res = await fetch('https://api.github.com/user', {
         headers: {
           Authorization: `Bearer ${token}`,
-          'User-Agent': 'Censai-Agent',
+          'User-Agent': 'Homebase-Agent',
           Accept: 'application/vnd.github.v3+json',
         },
       });
@@ -64,7 +64,7 @@ const ADAPTERS = {
     secretEnv: 'DEMO_PROVIDER_KEY',
     getCredential: envCredential('DEMO_PROVIDER_KEY'),
     async test(ctx) {
-      const key = this.getCredential(ctx);
+      const key = await this.getCredential(ctx);
       return key
         ? { ok: true, detail: 'demo key present' }
         : { ok: false, detail: 'no demo key configured' };
@@ -77,7 +77,7 @@ const ADAPTERS = {
     secretEnv: 'LINEAR_API_KEY',
     getCredential: envCredential('LINEAR_API_KEY'),
     async test(ctx) {
-      const key = this.getCredential(ctx);
+      const key = await this.getCredential(ctx);
       if (!key) return { ok: false, detail: 'LINEAR_API_KEY not configured' };
       const res = await fetch('https://api.linear.app/graphql', {
         method: 'POST',
@@ -94,11 +94,14 @@ const ADAPTERS = {
   'google-sheets': {
     id: 'google-sheets',
     authMode: 'oauth2',
-    getCredential(ctx) {
-      return getOAuthClient() ? 'oauth-configured' : null;
+    async getCredential(ctx) {
+      const userId = ctx?.req?.session?.userId;
+      const client = await getOAuthClient(userId);
+      return client ? 'oauth-configured' : null;
     },
     async test(ctx) {
-      const client = getOAuthClient();
+      const userId = ctx?.req?.session?.userId;
+      const client = await getOAuthClient(userId);
       if (!client) return { ok: false, detail: 'Not configured' };
       try {
         const res = await fetch('https://sheets.googleapis.com/$discovery/rest?version=v4');
@@ -119,9 +122,10 @@ export function listProviderAdapters() {
   return Object.values(ADAPTERS);
 }
 
-export function isProviderConfigured(adapter, ctx) {
+export async function isProviderConfigured(adapter, ctx) {
   if (!adapter || typeof adapter.getCredential !== 'function') return false;
-  return Boolean(adapter.getCredential(ctx));
+  const cred = await adapter.getCredential(ctx);
+  return Boolean(cred);
 }
 
 /**
@@ -133,7 +137,7 @@ export async function resolveConnectionState(adapter, ctx = {}, { runTest = fals
   if (!adapter) {
     return { state: CONNECTION_STATES.ERROR, configured: false, detail: 'unknown provider' };
   }
-  const configured = isProviderConfigured(adapter, ctx);
+  const configured = await isProviderConfigured(adapter, ctx);
   if (!configured) {
     return { state: CONNECTION_STATES.DISCONNECTED, configured: false };
   }

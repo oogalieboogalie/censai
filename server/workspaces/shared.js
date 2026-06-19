@@ -5,7 +5,8 @@ export const DEFAULT_READ_MAX_CHARS = 20000;
 export const MAX_READ_CHARS = 60000;
 
 export function getWorkspacesRoot() {
-  return process.env.CENSAI_WORKSPACES_ROOT
+  return process.env.CENSAIHUB_WORKSPACES_ROOT
+    || process.env.HOMEBASE_WORKSPACES_ROOT
     || path.resolve(process.cwd(), 'workspaces');
 }
 
@@ -13,8 +14,8 @@ export function mapProjectPathForRuntime(projectPath) {
   const raw = String(projectPath || '');
   if (!raw) return raw;
 
-  const hostRoot = process.env.CENSAI_HOST_PROJECT_ROOT;
-  const containerRoot = process.env.CENSAI_CONTAINER_PROJECT_ROOT;
+  const hostRoot = process.env.HOMEBASE_HOST_PROJECT_ROOT;
+  const containerRoot = process.env.HOMEBASE_CONTAINER_PROJECT_ROOT;
   const normalizedContainer = containerRoot?.replace(/\\/g, '/').replace(/\/+$/, '');
   if (hostRoot && containerRoot) {
     const normalizedRaw = raw.replace(/\\/g, '/').toLowerCase();

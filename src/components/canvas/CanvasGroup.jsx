@@ -4,11 +4,12 @@ import { AgentAvatar } from '../Agents.jsx';
 import { getAgentById } from '../../lib/agentStore.js';
 import { CanvasGroupPresetPopover } from './CanvasGroupPresetPopover.jsx';
 import { CanvasGroupResizeHandle } from './CanvasGroupResizeHandle.jsx';
+import { CanvasGroupBackgroundPicker } from './CanvasGroupBackgroundPicker.jsx';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('group');
 
-export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, onDragEnd, onLayout, onResizeRelayout, onApplyBuiltInPreset, onSavePreset, onLoadPreset, onDeletePreset }) {
+export function CanvasGroup({ group, zoom, allWins, allGroups, onUpdate, onClose, onMove, onDragEnd, onLayout, onResize, onApplyBuiltInPreset, onSavePreset, onLoadPreset, onDeletePreset }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [tempLabel, setTempLabel] = React.useState(group.label);
   const [presetMenuOpen, setPresetMenuOpen] = React.useState(false);
@@ -27,8 +28,14 @@ export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, o
       log.info('header button clicked', { group: group.id, button: e.button, control: hitButton?.title || 'input' });
       return;
     }
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      const tag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || document.activeElement.contentEditable === 'true') {
+        document.activeElement.blur();
+      }
+    }
     e.stopPropagation();
-    e.target.setPointerCapture(e.pointerId);
+    try { e.target.setPointerCapture(e.pointerId); } catch {}
     dragRef.current = { id: e.pointerId, startX: e.clientX, startY: e.clientY, isFirstMove: true };
     log.debug('header pointerdown', { group: group.id, button: e.button, w: group.w, h: group.h });
   };
@@ -68,13 +75,9 @@ export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, o
     none: 'transparent',
   };
   const bgMode = group.bgMode || 'tint';
-
-  const cycleBg = (e) => {
-    e.stopPropagation();
-    const modes = ['tint', 'light', 'dark', 'none'];
-    const next = modes[(modes.indexOf(bgMode) + 1) % modes.length];
-    onUpdate({ bgMode: next });
-  };
+  const background = bgMode === 'custom' && group.bgColor
+    ? group.bgColor
+    : bgStyles[bgMode] || bgStyles.tint;
 
   return (
     <div
@@ -83,7 +86,7 @@ export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, o
         position: 'absolute',
         left: group.x, top: group.y, width: group.w, height: group.h,
         border: `${4 / zoom}px solid ${borderColor}`,
-        background: bgStyles[bgMode],
+        background,
         borderRadius: 24,
         // Bump above windows while the preset popover is open so its content isn't clipped.
         zIndex: presetMenuOpen ? 100 : 4,
@@ -145,9 +148,11 @@ export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, o
               })}
             </div>
           )}
-          <button onClick={cycleBg} title="Toggle Background (Tint, Light, Dark, None)" style={{ all: 'unset', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', transition: 'color 0.15s' }} onMouseEnter={e => e.currentTarget.style.color = 'white'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </button>
+          <CanvasGroupBackgroundPicker
+            color={group.bgColor}
+            hue={hue}
+            onChange={(bgColor) => onUpdate({ bgColor, bgMode: 'custom' })}
+          />
           <button onClick={(e) => { e.stopPropagation(); setPresetMenuOpen(o => !o); setSavingPreset(false); }} title="Layout presets" style={{ all: 'unset', cursor: 'pointer', color: presetMenuOpen ? 'white' : 'rgba(255,255,255,0.7)', display: 'flex', transition: 'color 0.15s' }} onMouseEnter={e => e.currentTarget.style.color = 'white'} onMouseLeave={e => { if (!presetMenuOpen) e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </button>
@@ -181,15 +186,13 @@ export function CanvasGroup({ group, zoom, allWins, onUpdate, onClose, onMove, o
 
       <CanvasGroupResizeHandle
         group={group}
+        allWins={allWins}
+        allGroups={allGroups}
         zoom={zoom}
         borderColor={borderColor}
         dragRef={dragRef}
-        onUpdate={onUpdate}
-        onResizeRelayout={onResizeRelayout}
-        onLayout={onLayout}
+        onResize={onResize}
       />
     </div>
   );
 }
-
-

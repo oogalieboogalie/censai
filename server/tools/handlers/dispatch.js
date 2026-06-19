@@ -1,7 +1,7 @@
 import pool from '../../db.js';
 import { getSubAgents, getSubAgentById, createAgentTask } from '../../memory.js';
 
-export async function handleDispatchTool(agentId, name, args) {
+export async function handleDispatchTool(agentId, name, args, context = {}) {
   switch (name) {
 
     case 'dispatch_squad': {
@@ -38,6 +38,7 @@ export async function handleDispatchTool(agentId, name, args) {
             priority: t.priority || 'normal',
             batchId,
             batchLabel: label,
+            wakeId: context.agentWakeId || null,
           });
           created.push(`  • ${sub.name} → "${t.title}" [${task.id.slice(0, 8)}]`);
         } catch (err) {

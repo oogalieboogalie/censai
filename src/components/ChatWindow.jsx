@@ -13,6 +13,7 @@ export function ChatWindow({ win, onUpdate, allWins, canvasGroups, currentProjec
     setDraft,
     sending,
     liveStatus,
+    activityLog,
     showAttach,
     setShowAttach,
     copiedMessage,
@@ -44,7 +45,7 @@ export function ChatWindow({ win, onUpdate, allWins, canvasGroups, currentProjec
             onCopy={copyMessage}
           />
         ))}
-        {sending && <ChatStatus liveStatus={liveStatus} agent={agent} />}
+        {sending && <ChatStatus liveStatus={liveStatus} agent={agent} activityLog={activityLog} />}
       </div>
       <ChatInput
         draft={draft}

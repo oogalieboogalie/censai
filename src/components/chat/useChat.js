@@ -1,24 +1,12 @@
 import React from 'react';
 import { getAgents, getAgentById } from '../../lib/agentStore.js';
 import { sendMessageWithMeta } from '../../lib/chat.js';
+import { scriptedReply, replyDelayMs } from '../../data/landing-chat-script.js';
 import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
-
-function scriptedReply(userText) {
-  const text = String(userText || '').toLowerCase();
-  if (text.includes('docker') || text.includes('self-host')) {
-    return 'Censai runs as a Docker Compose stack with Postgres, optional Qdrant memory, and an optional runner for execution-heavy work.';
-  }
-  if (text.includes('agent') || text.includes('memory')) {
-    return 'Agents can keep weighted memories, private encrypted journals, knowledge graph notes, and tool permissions across sessions.';
-  }
-  return 'Censai turns multi-agent work into a visual canvas where you can chat, assign tasks, browse files, and keep the workspace state together.';
-}
-
-function replyDelayMs() {
-  return 450;
-}
+import { useWorkspaceStore } from '../../lib/store.js';
 
 export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, isActive }) {
+  const workspaceId = useWorkspaceStore(state => state.workspaceId);
   const agents = getAgents();
   const agent = getAgentById(win.agentId) || agents[1];
   const defaultMsgs = React.useMemo(() => [], [agent.id]);
@@ -29,6 +17,7 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
   const [draft, setDraft] = React.useState('');
   const [sending, setSending] = React.useState(false);
   const [liveStatus, setLiveStatus] = React.useState({ status: 'thinking', detail: null });
+  const [activityLog, setActivityLog] = React.useState([]);
   const [showAttach, setShowAttach] = React.useState(false);
   const [copiedMessage, setCopiedMessage] = React.useState(null);
   
@@ -89,38 +78,49 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
     pollForRestarts();
   }, 3000, { inactive: !isActive });
 
-  const send = async () => {
-    if ((!draft.trim() && !win.imageAttachment) || sending) return;
-    const userMsg = { from: 'me', text: draft.trim(), image: win.imageAttachment };
+  const send = React.useCallback(async (autoSendMessages = null) => {
+    const isAuto = Array.isArray(autoSendMessages);
+    if (isAuto) {
+      if (sending) return;
+    } else {
+      if ((!draft.trim() && !win.imageAttachment) || sending) return;
+    }
 
-    if (win.demoMode) {
-      const userText = draft.trim();
-      const displayMsgs = [...msgs, userMsg];
+    const userMsg = isAuto ? null : { from: 'me', text: draft.trim(), image: win.imageAttachment };
+    const displayMsgs = isAuto ? autoSendMessages : [...msgs, userMsg];
+
+    if (!isAuto) {
       setMsgs(displayMsgs);
       setDraft('');
+      if (win.imageAttachment) onUpdate({ imageAttachment: null });
+    }
+
+    if (win.demoMode) {
+      if (isAuto) return;
       setSending(true);
       setTimeout(() => {
-        setMsgs([...displayMsgs, { from: 'agent', text: scriptedReply(userText) }]);
+        setMsgs([...displayMsgs, { from: 'agent', text: scriptedReply(draft.trim()) }]);
         setSending(false);
       }, replyDelayMs());
       return;
     }
 
-    const modelMsgs = msgs.filter(m => !m.hidden);
-    let payloadMsgs = [...modelMsgs, userMsg];
+    const modelMsgs = displayMsgs.filter(m => !m.hidden);
+    let payloadMsgs = [...modelMsgs];
 
-    if (currentProject?.path) {
+    if (currentProject?.path && payloadMsgs.length > 0) {
+      const last = payloadMsgs.pop();
       payloadMsgs = [
-        ...payloadMsgs.slice(0, -1),
+        ...payloadMsgs,
         {
           from: 'system',
           text: `[SYSTEM CONTEXT] Current Censai project is "${currentProject.name}" at ${currentProject.path}. Use project tools with project: "${currentProject.name}" when reading, editing, testing, or assigning work. Treat this as the opened workspace folder, like a coding assistant launched in that directory.`,
         },
-        payloadMsgs[payloadMsgs.length - 1],
+        last,
       ];
     }
 
-    if (canvasGroups && allWins) {
+    if (canvasGroups && allWins && payloadMsgs.length > 0) {
       const activeGroups = canvasGroups.filter(g => (g.attachedAgents || []).includes(agent.id));
       if (activeGroups.length > 0) {
         let groupContextText = '';
@@ -139,28 +139,38 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
           });
         });
         if (groupContextText.trim()) {
-          payloadMsgs = [...modelMsgs, { 
-            from: 'system', 
-            text: `[SYSTEM CONTEXT] You are currently attached to the following visual groups on the canvas, which contain these items:\n${groupContextText}\n\nIMPORTANT INSTRUCTION: You have access to tools that can read local directories and GitHub repos. If you see a local directory path or repo above, you should proactively use the \`local_list_dir\`, \`local_read_file\`, or GitHub tools to explore its contents to assist the user.` 
-          }, userMsg];
+          const last = payloadMsgs.pop();
+          payloadMsgs = [
+            ...payloadMsgs,
+            { 
+              from: 'system', 
+              text: `[SYSTEM CONTEXT] You are currently attached to the following visual groups on the canvas, which contain these items:\n${groupContextText}\n\nIMPORTANT INSTRUCTION: You have access to tools that can read local directories and GitHub repos. If you see a local directory path or repo above, you should proactively use the \`local_list_dir\`, \`local_read_file\`, or GitHub tools to explore its contents to assist the user.` 
+            },
+            last
+          ];
         }
       }
     }
 
-    const displayMsgs = [...msgs, userMsg];
-    setMsgs(displayMsgs);
-    setDraft('');
-    if (win.imageAttachment) onUpdate({ imageAttachment: null });
     setSending(true);
     setLiveStatus({ status: 'thinking', detail: null });
-    
+    setActivityLog([]);
+
     try {
-      const reply = await sendMessageWithMeta(agent.id, payloadMsgs, { 
+      const reply = await sendMessageWithMeta(agent.id, payloadMsgs, {
         windowId: win.id,
+        workspaceId,
         currentProject,
         onStatusUpdate: (status, detail) => {
           setLiveStatus({ status, detail });
-        }
+          if (status === 'completed_tool' && detail) {
+            setActivityLog(log => [...log.slice(-39), detail]);
+          }
+        },
+        onChangeImpact: impact => setLiveStatus({
+          status: 'thinking',
+          detail: { changeImpact: impact },
+        }),
       });
       setMsgs([...displayMsgs, {
         from: 'agent',
@@ -171,7 +181,14 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
       setMsgs([...displayMsgs, { from: 'agent', text: 'Something went wrong. Try again.' }]);
     }
     setSending(false);
-  };
+  }, [msgs, draft, win.imageAttachment, win.demoMode, win.id, agent.id, workspaceId, currentProject, canvasGroups, allWins, onUpdate, setMsgs]);
+
+  React.useEffect(() => {
+    if (win.autoSend && msgs.length > 0 && msgs[msgs.length - 1].from === 'me' && !sending) {
+      onUpdate({ autoSend: false });
+      send(msgs);
+    }
+  }, [win.autoSend, msgs, sending, onUpdate, send]);
 
   return {
     agent,
@@ -180,6 +197,7 @@ export function useChat({ win, onUpdate, allWins, canvasGroups, currentProject, 
     setDraft,
     sending,
     liveStatus,
+    activityLog,
     showAttach,
     setShowAttach,
     copiedMessage,
@@ -201,11 +219,14 @@ function buildActivity(reply) {
     setupMs: timings?.setup_ms,
     toolMs: timings?.tool_ms,
     rounds: timings?.model_calls?.length || 0,
+    changeImpact: reply?.changeImpact || null,
     tools: tools.map(t => ({
       name: t.tool,
       ms: t.ms,
       resultChars: t.result_chars,
       round: t.round,
+      summary: t.summary,
+      ok: t.ok,
     })),
   };
 }

@@ -1,13 +1,40 @@
 import React from 'react';
 
 // Inline formatting: **bold**, *italic*, _italic_, `code`, [[wiki-link]]
-export function renderInline(str) {
+export function renderInline(str, onCopyCode) {
   if (typeof str !== 'string') return str;
   const parts = str.split(/(\*\*.*?\*\*|\*.*?\*|_.*?_|`.*?`|\[\[.*?\]\])/g);
   return parts.map((part, j) => {
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={j} style={{ fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
     if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) return <em key={j}>{part.slice(1, -1)}</em>;
-    if (part.startsWith('`') && part.endsWith('`')) return <code key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9em', background: 'var(--surface-2)', padding: '2px 4px', borderRadius: 4, color: 'var(--accent-ink)' }}>{part.slice(1, -1)}</code>;
+    if (part.startsWith('`') && part.endsWith('`')) {
+      const codeText = part.slice(1, -1);
+      if (onCopyCode) {
+        return (
+          <code
+            key={j}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.9em',
+              background: 'var(--surface-2)',
+              padding: '2px 4px',
+              borderRadius: 4,
+              color: 'var(--accent-ink)',
+              position: 'relative',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyCode(codeText);
+            }}
+            title="Click to copy"
+          >
+            {codeText}
+          </code>
+        );
+      }
+      return <code key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9em', background: 'var(--surface-2)', padding: '2px 4px', borderRadius: 4, color: 'var(--accent-ink)' }}>{codeText}</code>;
+    }
     if (part.startsWith('[[') && part.endsWith(']]')) {
       const linkText = part.slice(2, -2);
       return (
@@ -27,7 +54,8 @@ export function renderInline(str) {
 
 // Block-level markdown: headings, lists, tables, code fences
 // compact=true → slightly smaller headings for chat bubbles
-export function renderMarkdown(text, { compact = false } = {}) {
+// onCopyCode - optional callback for copying inline code snippets
+export function renderMarkdown(text, { compact = false, onCopyCode = null } = {}) {
   if (!text || typeof text !== 'string') return text;
 
   const lines = text.split('\n');
@@ -99,7 +127,7 @@ export function renderMarkdown(text, { compact = false } = {}) {
       element = ln.replace(/^>\s*/, '');
       result.push(
         <div key={i} style={{ borderLeft: '3px solid var(--hairline-strong)', paddingLeft: 10, color: 'var(--ink-soft)', fontStyle: 'italic' }}>
-          {renderInline(element)}
+          {renderInline(element, onCopyCode)}
         </div>
       );
       continue;
@@ -111,7 +139,7 @@ export function renderMarkdown(text, { compact = false } = {}) {
         const cells = ln.split('|').slice(1, -1).map(c => c.trim());
         result.push(
           <div key={i} style={{ display: 'flex', borderBottom: '1px solid var(--surface-2)', padding: '6px 0', fontSize: 13 }}>
-            {cells.map((c, j) => <div key={j} style={{ flex: 1, padding: '0 8px' }}>{renderInline(c)}</div>)}
+            {cells.map((c, j) => <div key={j} style={{ flex: 1, padding: '0 8px' }}>{renderInline(c, onCopyCode)}</div>)}
           </div>
         );
       }
@@ -120,7 +148,7 @@ export function renderMarkdown(text, { compact = false } = {}) {
 
     // Process inline formatting
     if (typeof element === 'string') {
-      element = renderInline(element);
+      element = renderInline(element, onCopyCode);
     }
 
     result.push(<div key={i} style={style}>{element}</div>);

@@ -1,22 +1,22 @@
 import React, { useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { ClipboardAddon } from '@xterm/addon-clipboard';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { createLogger } from '../../lib/logger.js';
+import {
+  getTerminalSocketUrl,
+  installTerminalInteractionBridge,
+} from './terminalInteractions.js';
 
 const log = createLogger('terminal');
-
-function getTerminalSocketUrl(cwd, sessionId) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const params = new URLSearchParams();
-  if (cwd) params.set('cwd', cwd);
-  if (sessionId) params.set('sessionId', sessionId);
-  return `${protocol}//${window.location.host}/api/terminal?${params.toString()}`;
-}
 
 export function useTerminal(hostRef, win, cwd, theme) {
   const termRef = useRef(null);
   const socketRef = useRef(null);
+  const fitAddonRef = useRef(null);
+  const replayingScrollbackRef = useRef(false);
   
   const agentEnabled = Boolean(win.agentEnabled);
   const attachedAgents = win.attachedAgents || [];
@@ -34,14 +34,27 @@ export function useTerminal(hostRef, win, cwd, theme) {
     const term = new Terminal({
       cursorBlink: true,
       convertEol: true,
-      fontFamily: 'var(--font-mono)',
-      fontSize: theme.fontSize || 13,
+      fontFamily: '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace',
+      fontSize: Math.round((theme.fontSize || 13) * (win.fontScale || 1.0)),
       lineHeight: 1.25,
       theme: theme,
+      allowProposedApi: true,
+      rightClickSelectsWord: true,
+      trimTrailingWhitespace: true,
     });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
+    fitAddonRef.current = fitAddon;
+    const clipboardAddon = new ClipboardAddon();
+    term.loadAddon(clipboardAddon);
+    // Open clickable links (auth URLs, etc.) in the browser
+    term.loadAddon(new WebLinksAddon((e, uri) => {
+      e.preventDefault();
+      window.open(uri, '_blank', 'noopener,noreferrer');
+    }));
     term.open(hostRef.current);
+    const cleanupInteractions = installTerminalInteractionBridge(term, hostRef.current);
+
     termRef.current = term;
 
     const socketUrl = getTerminalSocketUrl(cwd, win.id);
@@ -61,7 +74,14 @@ export function useTerminal(hostRef, win, cwd, theme) {
           log.info('backend connected', { backend: message.backend });
           term.writeln(`Connected — ${message.backend}.`);
         }
-        if (message.type === 'output') term.write(message.data);
+        if (message.type === 'output') {
+          if (message.replay) {
+            replayingScrollbackRef.current = true;
+            term.write(message.data, () => { replayingScrollbackRef.current = false; });
+          } else {
+            term.write(message.data);
+          }
+        }
         if (message.type === 'exit') {
           log.info('shell exited', { code: message.code ?? 0 });
           term.writeln(`\r\nProcess exited with code ${message.code ?? 0}.`);
@@ -80,6 +100,7 @@ export function useTerminal(hostRef, win, cwd, theme) {
     });
 
     const inputDisposable = term.onData((data) => {
+      if (replayingScrollbackRef.current) return;
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'input', data }));
       }
@@ -101,18 +122,40 @@ export function useTerminal(hostRef, win, cwd, theme) {
     resize();
 
     return () => {
+      cleanupInteractions();
       observer.disconnect();
       inputDisposable.dispose();
       socket.close();
-      term.dispose();
+      term.dispose(); // also cleans up key handlers, addons, etc.
       termRef.current = null;
       socketRef.current = null;
+      fitAddonRef.current = null;
     };
   }, [cwd, theme, win.id, sendBind]);
 
   React.useEffect(() => {
     sendBind();
   }, [agentEnabled, attachedAgents.join(','), sendBind]);
+
+  React.useEffect(() => {
+    const term = termRef.current;
+    if (term) {
+      const baseSize = theme.fontSize || 13;
+      const scale = win.fontScale || 1.0;
+      term.options.fontSize = Math.round(baseSize * scale);
+      if (fitAddonRef.current) {
+        try {
+          fitAddonRef.current.fit();
+          const socket = socketRef.current;
+          if (socket && socket.readyState === 1) {
+            socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+          }
+        } catch (err) {
+          log.warn('Failed to resize terminal on font scale change', err);
+        }
+      }
+    }
+  }, [win.fontScale, theme.fontSize]);
 
   return { termRef };
 }

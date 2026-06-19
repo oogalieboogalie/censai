@@ -11,6 +11,15 @@ export const MEDIA_WINDOW_MANIFESTS = [
     defaultSize: { w: 460, h: 380 },
   },
   {
+    kind: 'imageStudio',
+    canvasType: 'imageStudio',
+    label: 'Image Studio',
+    componentName: 'ImageStudioWindow',
+    componentPath: 'src/components/windows/imageStudio/index.jsx',
+    defaultSize: { w: 1200, h: 680 },
+    launcher: { show: true, order: 75, icon: 'NewWindow', label: 'Image Studio', hint: 'draw + generate' },
+  },
+  {
     kind: 'browser',
     canvasType: 'browser',
     label: 'Browser',
@@ -44,9 +53,6 @@ export const MEDIA_WINDOW_MANIFESTS = [
     componentPath: 'src/components/HtmlPreviewWindow.jsx',
     defaultSize: { w: 720, h: 520 },
     launcher: { show: true, order: 70, icon: 'Eye', label: 'HTML preview', hint: 'render HTML', props: { title: 'HTML Preview', fileName: 'preview.html' } },
-    // Renderable in 3D: the window streams its live DOM into `domSnapshot` (see
-    // HtmlPreviewWindow.jsx); fall back to the raw `html` before the first snapshot.
-    glyphSource: { fields: ['domSnapshot', 'html'], format: 'text', filename: 'live-dom.html' },
     lab: {
       title: 'HTML Preview',
       props: {
@@ -81,6 +87,15 @@ export const MEDIA_WINDOW_MANIFESTS = [
     launcher: { show: true, order: 140, icon: 'NewWorkflow', label: 'n8n', hint: 'workflow automation' },
   },
   {
+    kind: 'excalidraw',
+    canvasType: 'excalidraw',
+    label: 'Excalidraw',
+    componentName: 'ExcalidrawWindow',
+    componentPath: 'src/components/ExcalidrawWindow.jsx',
+    defaultSize: { w: 800, h: 600 },
+    launcher: { show: true, order: 180, icon: 'Edit', label: 'Excalidraw', hint: 'sketch & diagram' },
+  },
+  {
     kind: 'spotify',
     canvasType: 'spotify',
     label: 'Spotify',
@@ -88,5 +103,23 @@ export const MEDIA_WINDOW_MANIFESTS = [
     componentPath: 'src/components/SpotifyWindow.jsx',
     defaultSize: { w: 400, h: 560 },
     launcher: { show: true, order: 200, icon: 'Music', label: 'Spotify', hint: 'embedded player' },
+  },
+  {
+    kind: 'youtube',
+    canvasType: 'youtube',
+    label: 'YouTube',
+    componentName: 'YouTubeWindow',
+    componentPath: 'src/components/YouTubeWindow.jsx',
+    defaultSize: { w: 640, h: 420 },
+    launcher: { show: true, order: 210, icon: 'Video', label: 'YouTube', hint: 'embedded video' },
+  },
+  {
+    kind: 'figma',
+    canvasType: 'figma',
+    label: 'Figma',
+    componentName: 'FigmaWindow',
+    componentPath: 'src/components/FigmaWindow.jsx',
+    defaultSize: { w: 800, h: 560 },
+    launcher: { show: true, order: 220, icon: 'Edit', label: 'Figma', hint: 'embedded design file' },
   },
 ];

@@ -3,8 +3,8 @@ import path from 'path';
 
 export function mapProjectPathForRuntime(projectPath) {
   const raw = String(projectPath || '');
-  const hostRoot = process.env.CENSAI_HOST_PROJECT_ROOT;
-  const containerRoot = process.env.CENSAI_CONTAINER_PROJECT_ROOT;
+  const hostRoot = process.env.HOMEBASE_HOST_PROJECT_ROOT;
+  const containerRoot = process.env.HOMEBASE_CONTAINER_PROJECT_ROOT;
   if (!raw) return raw;
 
   const normalizedContainer = containerRoot?.replace(/\\/g, '/').replace(/\/+$/, '');

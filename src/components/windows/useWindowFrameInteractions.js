@@ -9,22 +9,41 @@ export function useWindowFrameInteractions({ win, onUpdate, onSelect, onDragEnd,
 
   const startDrag = (e) => {
     if (win.pinned) return;
-    onSelect();
+    e.stopPropagation();
+    onSelect(e);
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      const tag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || document.activeElement.contentEditable === 'true') {
+        document.activeElement.blur();
+      }
+    }
     dragRef.current = { x: e.clientX, y: e.clientY, ox: win.x, oy: win.y, mode: 'move' };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
   };
 
   const startResize = (e, dir) => {
     if (win.pinned) return;
-    e.stopPropagation(); onSelect();
+    e.stopPropagation(); onSelect(e);
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      const tag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || document.activeElement.contentEditable === 'true') {
+        document.activeElement.blur();
+      }
+    }
     dragRef.current = { x: e.clientX, y: e.clientY, ow: win.w, oh: win.h, ox: win.x, oy: win.y, mode: 'resize-' + dir };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
   };
 
   const startWire = (e) => {
-    e.stopPropagation(); onSelect();
+    e.stopPropagation(); onSelect(e);
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      const tag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || document.activeElement.contentEditable === 'true') {
+        document.activeElement.blur();
+      }
+    }
     dragRef.current = { x: e.clientX, y: e.clientY, mode: 'wire' };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     onWireStart?.(win.id, { x: e.clientX, y: e.clientY });
   };
 
@@ -72,7 +91,10 @@ export function useWindowFrameInteractions({ win, onUpdate, onSelect, onDragEnd,
   const onPointerUp = (e) => {
     if (dragRef.current && dragRef.current.mode === 'move') {
       if (typeof dragRef.current.lastNx === 'number') onUpdate({ x: dragRef.current.lastNx, y: dragRef.current.lastNy });
-      onDragEnd?.(win.id, dragRef.current.ox, dragRef.current.oy);
+      onDragEnd?.(win.id, {
+        x: dragRef.current.lastNx ?? win.x,
+        y: dragRef.current.lastNy ?? win.y,
+      });
     } else if (dragRef.current && dragRef.current.mode === 'wire') {
       onWireEnd?.(win.id, { x: e.clientX, y: e.clientY });
     }

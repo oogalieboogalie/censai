@@ -24,6 +24,7 @@ const ICON_BY_KIND = {
   htmlPreview: <Icon.Eye size={14} />,
   browser: <Icon.Search size={14} />,
   genImage: <ImageIcon size={14} />,
+  imageStudio: <ImageIcon size={14} />,
   idea: <GenIcon size={14} />,
   analyticsBoard: <Icon.Memory size={14} />,
   music: <Icon.Music size={14} />,
@@ -55,7 +56,7 @@ const CATEGORIES = [
   { label: 'Chat & Agents', kinds: ['chat', 'groupChat', 'agentDesigner', 'rook', 'exoSkeleton'] },
   { label: 'Work', kinds: ['todos', 'workflow', 'scheduler', 'operationsBoard', 'julesTasks', 'calendar'] },
   { label: 'Build', kinds: ['terminal', 'code_editor', 'files', 'doc', 'htmlPreview', 'browser'] },
-  { label: 'Create', kinds: ['genImage', 'idea', 'analyticsBoard'] },
+  { label: 'Create', kinds: ['genImage', 'imageStudio', 'idea', 'analyticsBoard'] },
   { label: 'Media', kinds: ['music', 'stream'] },
   { label: 'System', kinds: ['mailcow', 'vex', 'sovereignTest'] },
 ];

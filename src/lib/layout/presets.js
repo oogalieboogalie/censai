@@ -1,35 +1,51 @@
-// Built-in layout presets — fixed BSP trees keyed by window count. (Split from layoutAlgo.js.)
+// Built-in layout presets — semantic workspace plus fixed BSP trees.
+import {
+  buildSemanticWorkspaceLayout,
+  orderWindowsByRole,
+  SEMANTIC_PRESET,
+} from './semantic.js';
 
-export function getBuiltInPresets(count) {
+export function getBuiltInPresets(windowsOrCount) {
+  const count = Array.isArray(windowsOrCount) ? windowsOrCount.length : windowsOrCount;
   if (count <= 1) return [];
   if (count === 2) return [
-    { id: 'SPLIT_LR', label: 'Split (Left / Right)' },
-    { id: 'SPLIT_TB', label: 'Split (Top / Bottom)' }
+    SEMANTIC_PRESET,
+    { id: 'SPLIT_LR', label: 'Split (Left / Right)', preview: 'columns' },
+    { id: 'SPLIT_TB', label: 'Split (Top / Bottom)', preview: 'rows' }
   ];
   if (count === 3) return [
-    { id: 'STACK_LEFT_MAIN_RIGHT', label: 'Stack Left + Main Right' },
-    { id: 'MAIN_LEFT_STACK_RIGHT', label: 'Main Left + Stack Right' },
-    { id: 'THREE_COLUMNS', label: 'Three Columns' }
+    SEMANTIC_PRESET,
+    { id: 'STACK_LEFT_MAIN_RIGHT', label: 'Stack Left + Main Right', preview: 'leftStack' },
+    { id: 'MAIN_LEFT_STACK_RIGHT', label: 'Main Left + Stack Right', preview: 'rightStack' },
+    { id: 'THREE_COLUMNS', label: 'Three Columns', preview: 'columns3' }
   ];
   if (count === 4) return [
-    { id: 'QUAD', label: 'Quad Grid' },
-    { id: 'DASHBOARD_1', label: 'Dashboard (Top-left widgets)' },
-    { id: 'STACK_LEFT_TWO_MAINS', label: 'Stack Left + 2 Mains' },
-    { id: 'TWO_MAINS_STACK_RIGHT', label: '2 Mains + Stack Right' }
+    SEMANTIC_PRESET,
+    { id: 'QUAD', label: 'Quad Grid', preview: 'quad' },
+    { id: 'DASHBOARD_1', label: 'Dashboard', preview: 'dashboard' },
+    { id: 'STACK_LEFT_TWO_MAINS', label: 'Stack Left + 2 Mains', preview: 'leftStack' },
+    { id: 'TWO_MAINS_STACK_RIGHT', label: '2 Mains + Stack Right', preview: 'rightStack' }
   ];
   if (count === 5) return [
-    { id: 'SIDE_STACKS_MAIN_CENTER', label: 'Side Stacks + Main Center' },
-    { id: 'MAIN_PLUS_QUAD', label: 'Main + Quad Grid' },
-    { id: 'FIVE_COLUMNS', label: 'Five Columns' }
+    SEMANTIC_PRESET,
+    { id: 'SIDE_STACKS_MAIN_CENTER', label: 'Side Stacks + Main Center', preview: 'sideStacks' },
+    { id: 'MAIN_PLUS_QUAD', label: 'Main + Quad Grid', preview: 'mainQuad' },
+    { id: 'FIVE_COLUMNS', label: 'Five Columns', preview: 'columns3' }
   ];
   if (count >= 6) return [
-    { id: 'SIDE_STACKS_TWO_MAINS', label: 'Side Stacks + 2 Mains' }
+    SEMANTIC_PRESET,
+    { id: 'SIDE_STACKS_TWO_MAINS', label: 'Side Stacks + 2 Mains', preview: 'sideStacks' }
   ];
   return [];
 }
 
 export function applyPreset(presetId, windows) {
-  const ids = windows.map(w => w.id || w);
+  if (presetId === SEMANTIC_PRESET.id) {
+    return buildSemanticWorkspaceLayout(windows.map((window) => (
+      typeof window === 'string' ? { id: window, kind: 'generic' } : window
+    )));
+  }
+  const ids = orderWindowsByRole(windows).map(w => w.id || w);
   if (ids.length === 0) return null;
   if (ids.length === 1) return { type: 'leaf', windowId: ids[0] };
 

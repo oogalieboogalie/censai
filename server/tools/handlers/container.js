@@ -88,7 +88,7 @@ export async function handleContainerTool(agentId, name, args) {
     }
 
     case 'container_logs': {
-      const service = args.service || 'hub';
+      const service = args.service || 'homebase';
       const lines = args.lines || 50;
       try {
         return await getContainerLogs(service, lines);
@@ -98,7 +98,7 @@ export async function handleContainerTool(agentId, name, args) {
     }
 
     case 'restart_service': {
-      const service = args.service || 'hub';
+      const service = args.service || 'homebase';
       try {
         return await restartContainer(service);
       } catch (err) {

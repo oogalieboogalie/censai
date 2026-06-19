@@ -25,9 +25,14 @@ const INVISIBLE_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 
 // Known-good exceptions, listed as "<file>:<rule>". Add sparingly, with a PR
 // explaining why the hit is safe.
-const ALLOW = new Set([]);
+const ALLOW = new Set([
+  // This lifecycle hook only points Git at the repository's tracked hooks.
+  // It does not download, build, or execute third-party install payloads.
+  'package.json:lifecycle-hook',
+]);
 
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+const trackedFiles = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+const files = trackedFiles.filter((file) => fs.existsSync(file));
 const violations = [];
 const flag = (file, line, rule, detail) => {
   if (!ALLOW.has(`${file}:${rule}`)) violations.push({ file, line, rule, detail });

@@ -2,7 +2,7 @@ import express from 'express';
 import { dbReady } from '../dbState.js';
 import pool from '../db.js';
 import { getJulesSessions, refreshSession, syncAllJulesSessions } from '../jules.js';
-import { fetchGitHubPullRequestState, syncAgentTaskFromJulesSession } from '../jules-task-sync/index.js';
+import { fetchGitHubPullRequestFiles, fetchGitHubPullRequestState, syncAgentTaskFromJulesSession } from '../jules-task-sync/index.js';
 import { getSecret } from '../secrets.js';
 import { getProject } from '../workspaces.js';
 
@@ -79,6 +79,11 @@ julesRouter.get('/jules/sessions', async (req, res) => {
               token: githubToken,
             });
             if (prState) {
+              const changedFiles = await fetchGitHubPullRequestFiles({
+                repo: project?.repo,
+                prNumber: synced.pr_number,
+                token: githubToken,
+              });
               const patched = await pool.query(
                 `UPDATE jules_sessions
                  SET pr_state = $1,
@@ -99,7 +104,7 @@ julesRouter.get('/jules/sessions', async (req, res) => {
                 ]
               );
               synced = patched.rows[0] || synced;
-              await syncAgentTaskFromJulesSession(synced);
+              await syncAgentTaskFromJulesSession(synced, { changedFiles });
             }
           }
           refreshed.push(synced);

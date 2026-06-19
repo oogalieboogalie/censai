@@ -1,18 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-
-function fileWindowKind(name = '') {
-  return /\.html?$/i.test(name) ? 'htmlPreview' : 'doc';
-}
-
-function fileWindowProps(node, githubRepo) {
-  return {
-    fileName: node.name,
-    filePath: node.path,
-    isGithub: !!githubRepo,
-    githubRepo,
-  };
-}
+import { fileWindowKind, fileWindowProps } from './fileRouting.js';
 
 export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, githubRepo, mode, rootDirPath }) {
   const [open, setOpen] = React.useState(node.open ?? false);
@@ -63,7 +51,7 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
     setDropTarget(false);
     setDropping(true);
 
-    const imageData = e.dataTransfer.getData('application/x-censai-image');
+    const imageData = e.dataTransfer.getData('application/x-homebase-image');
     if (!imageData) {
       setDropping(false);
       return;

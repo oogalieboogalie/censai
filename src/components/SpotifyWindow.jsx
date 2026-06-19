@@ -1,50 +1,20 @@
 import React from 'react';
 import { Icon } from './Icons.jsx';
 import { WindowTitle } from './Windows.jsx';
+import { SPOTIFY_DEMO_PRESETS, parseSpotifyEmbedUrl, spotifyTitleFromEmbedUrl } from './spotify/spotifyEmbed.js';
 
 // Cache to hold iframes keyed by window.id to prevent reloading on React remounts
 const iframeCache = new Map();
 
-function parseSpotifyUrl(url) {
-  if (!url) return null;
-  const str = url.trim();
-
-  // if already an embed
-  if (str.includes('spotify.com/embed/')) return str;
-
-  try {
-    const u = new URL(str);
-    if (!u.hostname.includes('spotify.com')) return null;
-
-    // e.g., https://open.spotify.com/track/123 -> https://open.spotify.com/embed/track/123
-    // e.g., https://open.spotify.com/playlist/456 -> https://open.spotify.com/embed/playlist/456
-    // remove leading slash
-    const path = u.pathname.replace(/^\/+/, '');
-    if (!path) return null;
-
-    return `https://open.spotify.com/embed/${path}`;
-  } catch {
-    // maybe a URI like spotify:track:123
-    if (str.startsWith('spotify:')) {
-      const parts = str.split(':').slice(1); // ['track', '123']
-      if (parts.length >= 2) {
-        return `https://open.spotify.com/embed/${parts[0]}/${parts[1]}`;
-      }
-    }
-    return null;
-  }
-}
-
-// A hidden global container to park iframes so they don't get destroyed and reload
-let parkingLot;
-if (typeof document !== 'undefined') {
-  parkingLot = document.getElementById('spotify-parking-lot');
-  if (!parkingLot) {
-    parkingLot = document.createElement('div');
-    parkingLot.id = 'spotify-parking-lot';
-    parkingLot.style.display = 'none';
-    document.body.appendChild(parkingLot);
-  }
+function getParkingLot() {
+  if (typeof document === 'undefined') return null;
+  let parkingLot = document.getElementById('spotify-parking-lot');
+  if (parkingLot) return parkingLot;
+  parkingLot = document.createElement('div');
+  parkingLot.id = 'spotify-parking-lot';
+  parkingLot.style.display = 'none';
+  document.body.appendChild(parkingLot);
+  return parkingLot;
 }
 
 export function SpotifyWindow({ win, onUpdate }) {
@@ -71,6 +41,10 @@ export function SpotifyWindow({ win, onUpdate }) {
     }
 
     const iframe = iframeCache.get(win.id);
+    if (iframe && iframe.getAttribute('src') !== currentUrl) {
+      iframe.src = currentUrl;
+    }
+    iframe.title = win.spotifyTitle || spotifyTitleFromEmbedUrl(currentUrl);
     const container = containerRef.current;
     if (container && iframe) {
       if (iframe.parentNode !== container) {
@@ -80,23 +54,26 @@ export function SpotifyWindow({ win, onUpdate }) {
 
     return () => {
       const activeIframe = iframeCache.get(win.id);
+      const parkingLot = getParkingLot();
       if (activeIframe && parkingLot) {
         // Park it in the hidden container so it stays alive and doesn't reload!
         parkingLot.appendChild(activeIframe);
       }
     };
-  }, [currentUrl, win.id]);
+  }, [currentUrl, win.id, win.spotifyTitle]);
 
-  const handleLoad = () => {
-    const embedUrl = parseSpotifyUrl(inputUrl);
+  const loadPlayer = (url, title) => {
+    const embedUrl = parseSpotifyEmbedUrl(url);
     if (embedUrl) {
       setError(false);
-      onUpdate({ url: embedUrl });
+      onUpdate({ url: embedUrl, spotifyTitle: title || spotifyTitleFromEmbedUrl(embedUrl) });
       setInputUrl('');
     } else {
       setError(true);
     }
   };
+
+  const handleLoad = () => loadPlayer(inputUrl);
 
   const clearTrack = () => {
     if (iframeCache.has(win.id)) {
@@ -106,7 +83,7 @@ export function SpotifyWindow({ win, onUpdate }) {
       }
       iframeCache.delete(win.id);
     }
-    onUpdate({ url: '' });
+    onUpdate({ url: '', spotifyTitle: '' });
   };
 
   return (
@@ -114,13 +91,37 @@ export function SpotifyWindow({ win, onUpdate }) {
       <WindowTitle
         icon={<Icon.Music size={14} />}
         label="Spotify"
-        subtitle={currentUrl ? 'Now Playing' : 'Select stream'}
+        subtitle={currentUrl ? (win.spotifyTitle || 'Now Playing') : 'Select stream'}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--surface)' }}>
         {!currentUrl ? (
           <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ fontSize: 13, color: 'var(--ink)' }}>
               Paste a Spotify URL or URI to embed a player.
+            </div>
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              {SPOTIFY_DEMO_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => loadPlayer(preset.url, preset.name)}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    padding: '10px 14px',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: 'var(--ink)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon.Music size={14} style={{ color: 'var(--accent-ink)' }} />
+                    <span style={{ fontWeight: 500 }}>{preset.name}</span>
+                  </div>
+                </button>
+              ))}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

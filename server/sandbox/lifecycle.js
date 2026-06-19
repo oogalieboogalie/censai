@@ -3,6 +3,8 @@ import { createLogger } from '../logger.js';
 import { isDockerAvailable } from './availability.js';
 import { sandboxNameForPath, bindMountSource, WORKDIR } from './naming.js';
 import { ensureSandboxImage, SANDBOX_IMAGE } from './images.js';
+import { TOOLCHAIN_REGISTRY } from './toolchains.js';
+import { readToolchainConfig } from './toolchainConfig.js';
 
 const log = createLogger('sandbox-lifecycle');
 const KEEPALIVE = ['sleep', 'infinity'];
@@ -49,13 +51,24 @@ export async function ensureSandbox(hostPath, options = {}) {
     log.info('creating sandbox container', { name, hostPath });
     await ensureSandboxImage();
     const src = bindMountSource(hostPath);
+
+    // Inject API keys for any enabled CLI toolchains.
+    const { enabled: enabledTools, apiKeys: savedKeys } = readToolchainConfig();
+    const toolchainEnvFlags = enabledTools.flatMap((id) => {
+      const entry = TOOLCHAIN_REGISTRY[id];
+      if (!entry) return [];
+      const val = savedKeys[entry.envKey] || process.env[entry.envKey];
+      return val ? ['--env', `${entry.envKey}=${val}`] : [];
+    });
+
     const runArgs = [
       'run', '-d',
       '--name', name,
       '-w', WORKDIR,
       '-v', `${src}:${WORKDIR}`,
-      '--label', 'censai.sandbox=1',
-      '--label', `censai.hostPath=${src}`,
+      '--label', 'homebase.sandbox=1',
+      '--label', `homebase.hostPath=${src}`,
+      ...toolchainEnvFlags,
     ];
     if (options.network === false) runArgs.push('--network', 'none');
     runArgs.push(SANDBOX_IMAGE, ...KEEPALIVE);
@@ -89,7 +102,7 @@ export async function listSandboxes() {
   try {
     const { stdout, code } = await runnerClient.exec(
       'docker',
-      ['ps', '-a', '--filter', 'label=censai.sandbox=1', '--format', '{{.Names}}\t{{.Status}}\t{{.Label "censai.hostPath"}}'],
+      ['ps', '-a', '--filter', 'label=homebase.sandbox=1', '--format', '{{.Names}}\t{{.Status}}\t{{.Label "homebase.hostPath"}}'],
       { windowsHide: true }
     );
     if (code !== 0) return [];

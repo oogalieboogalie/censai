@@ -2,13 +2,51 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import session from 'express-session';
+import pool from '../db.js';
 import { createLogger } from '../logger.js';
+import { getSessionCookieOptions } from './sessionConfig.js';
 
 const log = createLogger('http');
 const APP_ORIGIN = process.env.APP_ORIGIN || 'http://localhost:5173';
 const QUIET_PATHS = [/^\/api\/health$/, /^\/api\/client-state/, /^\/api\/local-dev-restarts/];
 
+const PostgresStore = class extends session.Store {
+  constructor(dbPool) {
+    super();
+    this.pool = dbPool;
+  }
+  async get(sid, callback) {
+    try {
+      const res = await this.pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
+      if (res.rows.length === 0) return callback(null, null);
+      callback(null, res.rows[0].sess);
+    } catch (err) {
+      callback(err);
+    }
+  }
+  async set(sid, sess, callback) {
+    try {
+      await this.pool.query(
+        'INSERT INTO session (sid, sess, expire) VALUES ($1, $2, NOW() + INTERVAL \'30 days\') ON CONFLICT (sid) DO UPDATE SET sess = $2, expire = NOW() + INTERVAL \'30 days\'',
+        [sid, JSON.stringify(sess)]
+      );
+      callback(null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+  async destroy(sid, callback) {
+    try {
+      await this.pool.query('DELETE FROM session WHERE sid = $1', [sid]);
+      callback(null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+};
+
 export function setupMiddleware(app) {
+  app.set('trust proxy', 1);
   app.use(cors({ origin: APP_ORIGIN, credentials: true }));
   app.use(express.json({ limit: '10mb' }));
 
@@ -34,10 +72,14 @@ export function setupMiddleware(app) {
     throw new Error('SESSION_SECRET is required in production');
   }
 
+  const store = new PostgresStore(pool);
+
   app.use(session({
+    store,
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 * 30 } // 30 days
+    proxy: true,
+    cookie: getSessionCookieOptions(APP_ORIGIN),
   }));
 }

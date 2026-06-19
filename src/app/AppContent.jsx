@@ -12,60 +12,57 @@ import { api } from '../lib/api.js';
 import { getCanvasObjectType, legacyKindForCanvasType } from '../lib/canvasObjectTypes.js';
 import { DEFAULT_WINDOW_SIZES, getDefaultWindowSize } from '../lib/windowManifest.js';
 import { createLogger } from '../lib/logger.js';
-import { withTimeout, withoutUnsupportedWindows, randomDropSpot } from '../lib/appUtils.js';
+import { withTimeout, withoutUnsupportedWindows, randomDropSpot, DEFAULT_HTML_PREVIEW } from '../lib/appUtils.js';
+import {
+  getChromeWindowControlState,
+  runChromeCloseAction,
+  runChromeMaximizeAction,
+  runChromeMinimizeAction,
+} from './chromeWindowControls.js';
 
 import { Toolbar } from './Toolbar.jsx';
 import { Hud } from './Hud.jsx';
 import { useAppActions } from './hooks/useAppActions.js';
 import { useAppPresets } from './hooks/useAppPresets.js';
+import { useWorkspaceHistory } from './hooks/useWorkspaceHistory.js';
+import { Login } from '../components/Login.jsx';
+import { SovereignAccessGate } from '../components/SovereignAccessGate.jsx';
+import { shouldShowSovereignAccessGate } from '../lib/sovereignAccess.js';
 
 const log = createLogger('canvas');
-
-const DEFAULT_HTML_PREVIEW = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Censai Preview</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: Inter, system-ui, sans-serif;
-        background: #f8fafc;
-        color: #0f172a;
-      }
-      main {
-        width: min(560px, calc(100vw - 48px));
-        padding: 32px;
-        border: 1px solid #dbe3ef;
-        border-radius: 10px;
-        background: white;
-        box-shadow: 0 16px 45px rgba(15, 23, 42, 0.12);
-      }
-      h1 { margin: 0 0 10px; font-size: 28px; }
-      p { margin: 0; line-height: 1.55; color: #475569; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>HTML Preview</h1>
-      <p>This preview window is live and ready for pasted or opened HTML.</p>
-    </main>
-  </body>
-</html>`;
 
 export function AppContent() {
   const [initial, setInitial] = React.useState(null);
   const [dataLoading, setDataLoading] = React.useState(true);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [session, setSession] = React.useState({ authenticated: false, oauthConfigured: false });
+  const [sessionChecking, setSessionChecking] = React.useState(true);
+  const [sovereignUnlocked, setSovereignUnlocked] = React.useState(false);
+  const unlockSovereignAccess = React.useCallback(() => setSovereignUnlocked(true), []);
 
   React.useEffect(() => {
     let cancelled = false;
     const init = async () => {
+      setSessionChecking(true);
       setDataLoading(true);
       setIsInitialized(false);
+
+      let currentSess = { authenticated: false, oauthConfigured: false };
+      try {
+        currentSess = await api.getSession();
+        if (cancelled) return;
+        setSession(currentSess);
+      } catch (err) {
+        console.error("Failed to get session status", err);
+      } finally {
+        if (!cancelled) setSessionChecking(false);
+      }
+
+      if (!currentSess.authenticated) {
+        if (!cancelled) setDataLoading(false);
+        return;
+      }
+
       initializeAgents().catch((err) => {
         console.error("Failed to initialize agents from database", err);
       });
@@ -99,7 +96,35 @@ export function AppContent() {
     return () => { cancelled = true; };
   }, []);
 
-  const { wins, setWins, canvasGroups, setCanvasGroups, paths, setPaths, links, setLinks, activeTool, setActiveTool, penColor, setPenColor, penSize, setPenSize, penMode, setPenMode, activeId, setActiveId, dockOffset, setDockOffset, groups, setGroups, settingsOpen, setSettingsOpen, focusMode, setFocusMode, extraAgents, setExtraAgents, currentProject, setCurrentProject, pan, setPan, zoom, setZoom, presets, setPresets } = useWorkspaceStore();
+  const {
+    wins, setWins,
+    canvasGroups, setCanvasGroups,
+    paths, setPaths,
+    links, setLinks,
+    activeTool, setActiveTool,
+    penColor, setPenColor,
+    penSize, setPenSize,
+    penMode, setPenMode,
+    activeId, setActiveId,
+    selectedIds, setSelectedIds,
+    dockOffset, setDockOffset,
+    groups, setGroups,
+    settingsOpen, setSettingsOpen,
+    focusMode, setFocusMode,
+    extraAgents, setExtraAgents,
+    currentProject, setCurrentProject,
+    workspaceId, setWorkspaceId,
+    pan, setPan,
+    zoom, setZoom,
+    presets, setPresets,
+    sidebarFavorites, setSidebarFavorites,
+    // Store named actions
+    createLink, deleteLink,
+    fitView, jumpToNearestCluster,
+    onDragAgent,
+    onNewAgent, onNewTerminal, onNewHtmlPreview, onNewWindow, onNewWorkflow, onSpawnRook, onNewMailcow, onNewVex,
+    openLocalProject, moveGroup
+  } = useWorkspaceStore();
 
   React.useEffect(() => {
     if (initial && !dataLoading && !isInitialized) {
@@ -109,12 +134,12 @@ export function AppContent() {
       setPaths(initial.paths || []);
       setLinks(initial.links || []);
       if (initial.penColor) setPenColor(initial.penColor);
-      if (initial.penSize) setPenSize(initial.penSize);
+      if (initial.penSize) setPenSize(initial.penSize); setWorkspaceId(initial.workspaceId || crypto.randomUUID());
       setPenMode(Boolean(initial.penMode));
       setDockOffset(initial.dockOffset || 0);
       setGroups(initial.groups || DEFAULT_GROUPS);
       setFocusMode(initial.focusMode || false);
-      setExtraAgents(initial.extraAgents || []);
+      setExtraAgents(initial.extraAgents || []); setSidebarFavorites(initial.sidebarFavorites || []);
 
       const fit = computeFitView(safeWins, initial.canvasGroups || []);
       setPan({ x: fit.x, y: fit.y });
@@ -124,22 +149,38 @@ export function AppContent() {
       return () => cancelAnimationFrame(id);
     }
   }, [initial, dataLoading, isInitialized]);
-  const panRef = React.useRef(pan);
-  const zoomRef = React.useRef(zoom);
-  React.useEffect(() => { panRef.current = pan; }, [pan]);
-  React.useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
   const onPanZoom = React.useCallback(({ panX, panY, zoom: z }) => {
     setPan({ x: panX, y: panY });
     setZoom(z);
   }, []);
-  const winsRef = React.useRef(wins);
-  React.useEffect(() => { winsRef.current = wins; }, [wins]);
-  const canvasGroupsRef = React.useRef(canvasGroups);
-  React.useEffect(() => { canvasGroupsRef.current = canvasGroups; }, [canvasGroups]);
-  const groupDragCacheRef = React.useRef(null);
 
-  const { spawnAt, spawnGroup, onUpdate, onUpdateGroup, onCloseGroup, onClose, createAgent } = useAppActions(panRef, zoomRef, winsRef, canvasGroupsRef);
-  const { saveAsPreset, loadPreset, deletePreset, saveGroupPreset, loadGroupPreset, deleteGroupPreset, autoArrangeGroup } = useAppPresets(panRef, zoomRef, winsRef, canvasGroupsRef);
+  const { spawnAt, spawnGroup, onUpdate, onUpdateGroup, resizeGroup, deleteWindows, onCloseGroup, onClose, createAgent } = useAppActions();
+  const { saveAsPreset, loadPreset, deletePreset, saveGroupPreset, loadGroupPreset, deleteGroupPreset, autoArrangeGroup } = useAppPresets();
+  const { undo, redo } = useWorkspaceHistory(isInitialized);
+  const windowControlState = React.useMemo(
+    () => getChromeWindowControlState({ wins, activeId, focusMode }),
+    [wins, activeId, focusMode]
+  );
+  const handleWindowSelect = React.useCallback((id, event) => {
+    if (!id) {
+      setActiveId(null);
+      setSelectedIds([]);
+      return;
+    }
+    const toggle = Boolean(event?.metaKey || event?.ctrlKey || event?.shiftKey);
+    setActiveId(id);
+    setSelectedIds((current) => {
+      if (!toggle) return [id];
+      return current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id];
+    });
+  }, [setActiveId, setSelectedIds]);
+  const handleSelection = React.useCallback((ids) => {
+    setSelectedIds(ids);
+    setActiveId(ids.at(-1) || null);
+  }, [setActiveId, setSelectedIds]);
 
   const persistTimeoutRef = React.useRef(null);
   React.useEffect(() => {
@@ -147,132 +188,29 @@ export function AppContent() {
     if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
       // Pan/zoom intentionally not persisted — we always fit-to-content on load.
-      const state = { wins: withoutUnsupportedWindows(wins), canvasGroups, dockOffset, groups, focusMode, paths, links, extraAgents, penColor, penSize, penMode };
+      const state = { workspaceId, wins: withoutUnsupportedWindows(wins), canvasGroups, dockOffset, groups, focusMode, paths, links, extraAgents, penColor, penSize, penMode, sidebarFavorites };
       api.saveWorkspace(state);
     }, 1000);
     return () => {
       if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     };
-  }, [wins, canvasGroups, paths, links, groups, dockOffset, focusMode, extraAgents, penColor, penSize, penMode, isInitialized]);
-
-  const fitView = React.useCallback(() => {
-    const fit = computeFitView(winsRef.current, canvasGroupsRef.current);
-    setPan({ x: fit.x, y: fit.y });
-    setZoom(fit.zoom);
-  }, []);
-
-  const jumpToNearestCluster = React.useCallback(() => {
-    const clusters = clusterWindows(winsRef.current);
-    if (!clusters.length) return;
-
-    const viewCenter = {
-      x: (window.innerWidth / 2 - panRef.current.x) / zoomRef.current,
-      y: (window.innerHeight / 2 - panRef.current.y) / zoomRef.current,
-    };
-    const nearest = clusters
-      .map((cluster) => {
-        const bounds = boundsForItems(cluster);
-        const cx = bounds.minX + bounds.w / 2;
-        const cy = bounds.minY + bounds.h / 2;
-        return { cluster, bounds, distance: Math.hypot(cx - viewCenter.x, cy - viewCenter.y) };
-      })
-      .sort((a, b) => a.distance - b.distance)[0];
-
-    const fit = computeFitBounds(nearest.bounds);
-    setPan({ x: fit.x, y: fit.y });
-    setZoom(fit.zoom);
-  }, []);
+  }, [workspaceId, wins, canvasGroups, paths, links, groups, dockOffset, focusMode, extraAgents, penColor, penSize, penMode, sidebarFavorites, isInitialized]);
 
   // ─── Presets: named snapshots of the workspace the user can save and restore ───
   React.useEffect(() => {
     api.getPresets().then(res => setPresets(res || []));
   }, []);
 
-  const openLocalProject = React.useCallback(async ({ path, name }) => {
-    const project = await api.setCurrentProject({ path, name });
-    setCurrentProject(project);
-    setWins(prev => {
-      const existing = prev.find(w => w.kind === 'files');
-      if (existing) {
-        return prev.map(w => w.id === existing.id
-          ? { ...w, mode: 'local', dirPath: project.path }
-          : w
-        );
-      }
-      return [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          kind: 'files',
-          x: -180,
-          y: -120,
-          w: DEFAULT_WINDOW_SIZES.files.w,
-          h: DEFAULT_WINDOW_SIZES.files.h,
-          mode: 'local',
-          dirPath: project.path,
-        },
-      ];
-    });
-    return project;
-  }, []);
-
-  const onNewAgent = () => spawnAt('agentDesigner');
-  const onNewTerminal = () => spawnAt('terminal', { title: 'Terminal', cwd: currentProject?.path || '' });
-  const onNewHtmlPreview = () => spawnAt('htmlPreview', { title: 'HTML Preview', fileName: 'preview.html', html: DEFAULT_HTML_PREVIEW });
-  const onNewWindow = () => {
-    const order = ['terminal', 'operationsBoard', 'chat', 'todos', 'workflow', 'files', 'group', 'calendar'];
-    const counts = order.map(k => wins.filter(w => w.kind === k).length);
-    const min = Math.min(...counts);
-    const next = order[counts.indexOf(min)];
-    if (next === 'chat') spawnAt('chat', { agentId: 'censai' });
-    else if (next === 'group') spawnAt('group', { groupName: groups[0]?.name || 'Core Team', groupHue: groups[0]?.hue || 5, memberIds: groups[0]?.agentIds || ['architect','censai','atlas','genesis','nexus','foundation','echo'] });
-    else if (next === 'terminal') onNewTerminal();
-    else spawnAt(next);
-  };
-  const onNewWorkflow = () => spawnAt('workflow');
-  const onSpawnRook = () => spawnAt('rook', { title: 'Rook Agent Control' });
-  const onNewMailcow = () => spawnAt('mailcow', { title: 'Mailcow' });
-  const onNewVex = () => spawnAt('vex', { title: 'Vex Orchestrator' });
-
-  const onDragAgent = (agent, screenPt) => {
-    const els = document.elementsFromPoint(screenPt.x, screenPt.y);
-    const winEl = els.find(el => el.dataset?.winId);
-    const groupEl = els.find(el => el.dataset?.groupId);
-
-    if (winEl) {
-      const winId = winEl.dataset.winId;
-      const w = winsRef.current.find(x => x.id === winId);
-      if (w && w.kind !== 'agent') {
-        const attached = w.attachedAgents || [];
-        if (!attached.includes(agent.id)) onUpdate(winId, { attachedAgents: [...attached, agent.id] });
-        setActiveId(winId);
-        return;
-      }
-      if (w && w.kind === 'agent') { setActiveId(winId); return; }
-    } else if (groupEl) {
-      const groupId = groupEl.dataset.groupId;
-      const g = canvasGroupsRef.current.find(x => x.id === groupId);
-      if (g) {
-        const attached = g.attachedAgents || [];
-        if (!attached.includes(agent.id)) onUpdateGroup(groupId, { attachedAgents: [...attached, agent.id] });
-        return;
-      }
-    }
-    // Convert screen coords to canvas-space coords
-    const canvas = document.getElementById('canvas-root');
-    const rect = canvas?.getBoundingClientRect();
-    const currentPan = panRef.current;
-    const currentZoom = zoomRef.current;
-    const x = (screenPt.x - (rect?.left || 0) - currentPan.x) / currentZoom - 160;
-    const y = (screenPt.y - (rect?.top || 0) - currentPan.y) / currentZoom - 80;
-    const existing = winsRef.current.find(w => w.kind === 'agent' && w.agentId === agent.id);
-    if (existing) { setActiveId(existing.id); onUpdate(existing.id, { x, y }); return; }
-    spawnAt('agent', { agentId: agent.id }, { x, y });
-  };
-
   React.useEffect(() => {
     const onKey = (e) => {
       const meta = e.metaKey || e.ctrlKey;
+      const editing = ['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.contentEditable === 'true';
+      if (meta && !editing && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      }
+      else if (meta && !editing && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
       if (meta && e.key.toLowerCase() === 'n') { e.preventDefault(); onNewAgent(); }
       else if (meta && e.key.toLowerCase() === 'w') { e.preventDefault(); onNewWindow(); }
       else if (meta && e.key.toLowerCase() === 'f') { e.preventDefault(); setFocusMode(f => !f); }
@@ -280,7 +218,19 @@ export function AppContent() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [wins.length]);
+  }, [onNewAgent, onNewWindow, redo, setFocusMode, setSettingsOpen, undo]);
+
+  if (sessionChecking) {
+    return <div style={{ position: 'fixed', inset: 0, background: 'var(--canvas)', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Authenticating...</div>;
+  }
+
+  if (!session.authenticated) {
+    return <Login oauthConfigured={session.oauthConfigured} onLoginSuccess={() => window.location.reload()} />;
+  }
+
+  if (shouldShowSovereignAccessGate(session, sovereignUnlocked)) {
+    return <SovereignAccessGate onConfigured={unlockSovereignAccess} />;
+  }
 
   if (dataLoading) {
     return <div style={{ position: 'fixed', inset: 0, background: 'var(--canvas)', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Loading...</div>;
@@ -290,49 +240,29 @@ export function AppContent() {
     <>
       <div id="canvas-root" style={{ position: 'fixed', inset: 0 }}>
         <Canvas
-          wins={wins} activeId={activeId}
+          wins={wins} activeId={activeId} selectedIds={selectedIds}
           pan={pan} zoom={zoom} onPanZoom={onPanZoom} onFitView={fitView}
           onJumpNearestCluster={jumpToNearestCluster}
-          onUpdate={onUpdate} onClose={onClose} onSelect={(id) => setActiveId(id)}
+          onUpdate={onUpdate} onClose={onClose} onSelect={handleWindowSelect}
+          onSelection={handleSelection} onDeleteSelected={deleteWindows}
           onSpawn={spawnAt} dockState={{ groups, offset: dockOffset }}
           canvasGroups={canvasGroups}
           paths={paths} setPaths={setPaths}
-          links={links} onLinkCreate={(fromId, toId) => setLinks(prev => [...prev.filter(l => !(l.fromId === fromId && l.toId === toId)), { id: crypto.randomUUID(), fromId, toId, timestamp: Date.now() }])}
-          onLinkDelete={(id) => setLinks(prev => prev.filter(l => l.id !== id))}
+          links={links} onLinkCreate={createLink}
+          onLinkDelete={deleteLink}
           currentProject={currentProject}
           onSpawnGroup={spawnGroup}
           onUpdateGroup={onUpdateGroup}
+          onResizeGroup={resizeGroup}
           onCloseGroup={onCloseGroup}
           onAutoArrangeGroup={autoArrangeGroup}
           onSaveGroupPreset={saveGroupPreset}
           onLoadGroupPreset={loadGroupPreset}
           onDeleteGroupPreset={deleteGroupPreset}
-          onMoveGroup={(id, dx, dy, isFirstMove) => {
-            const g = canvasGroups.find(x => x.id === id);
-            if (!g) return;
-
-            if (isFirstMove) {
-              const enclosedWins = wins.filter(w => w.groupId === id).map(w => ({ id: w.id, ox: w.x, oy: w.y }));
-              const enclosedGroups = canvasGroups.filter(otherG => otherG.groupId === id).map(otherG => ({ id: otherG.id, ox: otherG.x, oy: otherG.y }));
-
-              groupDragCacheRef.current = { ox: g.x, oy: g.y, enclosedWins, enclosedGroups };
-            }
-
-            const cache = groupDragCacheRef.current;
-            if (!cache) return;
-
-            onUpdateGroup(id, { x: cache.ox + dx, y: cache.oy + dy });
-
-            cache.enclosedWins.forEach(item => {
-              onUpdate(item.id, { x: item.ox + dx, y: item.oy + dy });
-            });
-            cache.enclosedGroups.forEach(item => {
-              onUpdateGroup(item.id, { x: item.ox + dx, y: item.oy + dy });
-            });
-          }}
-          onRubberBand={(rect) => {
+          onMoveGroup={moveGroup}
+          onRubberBand={(rect) => { const size = getDefaultWindowSize('todos');
             spawnAt('todos', { title: 'Plan', subtitle: 'rubber-banded region', items: [] },
-              { x: rect.x, y: rect.y }, { w: Math.max(260, rect.w), h: Math.max(180, rect.h) });
+              { x: rect.x, y: rect.y }, { w: Math.max(size.w, rect.w), h: Math.max(size.h, rect.h) });
           }}
           activeTool={activeTool} penColor={penColor} penSize={penSize} penMode={penMode}
           onRequestNewAgent={onNewAgent}
@@ -355,20 +285,15 @@ export function AppContent() {
         onSaveAsPreset={saveAsPreset}
         onLoadPreset={loadPreset}
         onDeletePreset={deletePreset}
-        onMin={() => {
-          if (activeId) {
-            const activeWin = wins.find(w => w.id === activeId);
-            if (activeWin) {
-              onUpdate(activeId, { pinned: !activeWin.pinned });
-            }
-          }
-        }}
-        onMax={() => {}}
-        onClose={() => {
-          if (activeId) {
-            onClose(activeId);
-          }
-        }}
+        windowControlState={windowControlState}
+        onMin={() => runChromeMinimizeAction({ wins, activeId, onUpdate })}
+        onMax={() => runChromeMaximizeAction({
+          wins,
+          activeId,
+          onUpdate,
+          onToggleFocus: () => setFocusMode((f) => !f),
+        })}
+        onClose={() => runChromeCloseAction({ activeId, onClose })}
       />
       <MultiGroupDock
         groups={groups} onGroupsChange={setGroups} focusMode={focusMode}
@@ -378,6 +303,7 @@ export function AppContent() {
         focusMode={focusMode} setFocusMode={setFocusMode}
         penMode={penMode} setPenMode={setPenMode}
         onResetWorkspace={() => { if (confirm('Clear all windows + designed agents?')) { api.resetWorkspace().finally(() => location.reload()); } }}
+        onLogout={async () => { if (confirm('Log out from Censai?')) { await api.logout(); window.location.reload(); } }}
       />
       <Hud focusMode={focusMode} />
       <Toolbar

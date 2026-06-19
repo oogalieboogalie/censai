@@ -1,22 +1,26 @@
-import { GoogleGenAI } from '@google/genai';
-import { getSecret } from '../../secrets.js';
-import { getGeminiApiKey } from '../../googleKeys.js';
 import { dbReady } from '../../dbState.js';
 import { getAgentsByIds, buildSystemPrompt } from '../../memory.js';
 import {
-  MODEL, BASE_URL, getApiKey, OLLAMA_MODEL_ALIASES, fetchChatCompletion
-} from './shared.js';
+  callModel,
+  IMAGE_GENERATION_MODEL_KIND,
+  resolveChatModelConfig,
+  resolveImageGenerationModelConfig,
+} from '../../aiGateway/index.js';
 
 export async function handleImageGen(req, res) {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
   try {
-    const ai = new GoogleGenAI({ apiKey: getSecret('GEMINI_API_KEY') });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-image-preview",
-      contents: prompt,
+    const config = resolveImageGenerationModelConfig({ modelProvider: 'google' });
+    const response = await callModel({
+      kind: IMAGE_GENERATION_MODEL_KIND,
+      config,
+      body: {
+        model: config.model,
+        prompt,
+      },
+      logContext: { source: 'image-generation' },
     });
 
     let base64Image = null;
@@ -52,38 +56,42 @@ export async function handleIdeaExpand(req, res) {
   }
 
   try {
-    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-    const apiKey = getGeminiApiKey(getApiKey());
     const model = process.env.IDEA_EXPAND_MODEL || 'gemini-2.5-flash';
+    const config = resolveChatModelConfig({ modelProvider: 'google', modelName: model });
     const projectLine = project?.name || project?.path
       ? `Project context: ${project.name || 'Untitled project'}${project.path ? ` at ${project.path}` : ''}.`
       : 'No project context has been selected yet.';
 
-    const completion = await fetchChatCompletion(baseUrl, apiKey, {
-      model,
-      temperature: 0.75,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            'You expand rough product ideas into useful planning notes.',
-            'Keep the output practical, specific, and not too long.',
-            'Return clean markdown with these sections: Expanded Idea, Why It Matters, Possible UX, Open Questions, Next Step.',
-            'Do not pretend implementation details are known if they are not in the prompt.',
-          ].join('\n'),
-        },
-        {
-          role: 'user',
-          content: [
-            projectLine,
-            title ? `Idea pad title: ${title}` : null,
-            '',
-            'Raw idea bullets:',
-            ...cleanIdeas.map(item => `- ${item}`),
-          ].filter(Boolean).join('\n'),
-        },
-      ],
-    }, 45000);
+    const completion = await callModel({
+      config,
+      body: {
+        model,
+        temperature: 0.75,
+        messages: [
+          {
+            role: 'system',
+            content: [
+              'You expand rough product ideas into useful planning notes.',
+              'Keep the output practical, specific, and not too long.',
+              'Return clean markdown with these sections: Expanded Idea, Why It Matters, Possible UX, Open Questions, Next Step.',
+              'Do not pretend implementation details are known if they are not in the prompt.',
+            ].join('\n'),
+          },
+          {
+            role: 'user',
+            content: [
+              projectLine,
+              title ? `Idea pad title: ${title}` : null,
+              '',
+              'Raw idea bullets:',
+              ...cleanIdeas.map(item => `- ${item}`),
+            ].filter(Boolean).join('\n'),
+          },
+        ],
+      },
+      timeoutMs: 45000,
+      logContext: { source: 'idea-expand' },
+    });
 
     const text = completion?.choices?.[0]?.message?.content?.trim();
     res.json({
@@ -117,30 +125,17 @@ export async function handleGroupChat(req, res) {
     }
 
     for (const agentId of agentIds) {
-      let reqModel = MODEL;
-      let reqBaseUrl = BASE_URL;
-      let reqApiKey = getApiKey();
+      let modelConfig = resolveChatModelConfig();
       let systemPrompt = 'You are a helpful assistant.';
 
       if (dbReady()) {
         try {
           const agent = agentsMap[agentId];
           if (agent && agent.model_name) {
-            reqModel = agent.model_name;
-            if (agent.model_provider === 'openrouter') {
-              reqBaseUrl = 'https://openrouter.ai/api/v1';
-              reqApiKey = getSecret('OPENROUTER_API_KEY') || getApiKey();
-            } else if (agent.model_provider === 'google') {
-              reqBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-              reqApiKey = getGeminiApiKey(getApiKey());
-            } else if (agent.model_provider === 'ollama') {
-              reqBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/v1';
-              reqApiKey = 'ollama';
-              reqModel = OLLAMA_MODEL_ALIASES.get(reqModel) || reqModel;
-            } else if (agent.model_provider === 'moonshot') {
-              reqBaseUrl = process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1';
-              reqApiKey = getSecret('MOONSHOT_API_KEY') || getApiKey();
-            }
+            modelConfig = resolveChatModelConfig({
+              modelProvider: agent.model_provider,
+              modelName: agent.model_name,
+            });
           }
 
           const memoryPrompt = await buildSystemPrompt(agentId, currentMessages[currentMessages.length - 1]?.text);
@@ -161,27 +156,24 @@ export async function handleGroupChat(req, res) {
       ];
 
       const body = {
-        model: reqModel,
+        model: modelConfig.model,
         max_tokens: 1024, // keep it brief in group chat
         messages: chatMessages,
       };
 
-      const response = await fetch(`${reqBaseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${reqApiKey}`
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        const data = await callModel({
+          config: modelConfig,
+          body,
+          logContext: { source: 'group-chat', agentId },
+        });
         const text = data.choices?.[0]?.message?.content;
         if (text) {
           replies.push({ agentId, text });
           currentMessages.push({ from: agentId, text });
         }
+      } catch (err) {
+        console.error(`Group Chat model error for ${agentId}:`, err.message);
       }
     }
 

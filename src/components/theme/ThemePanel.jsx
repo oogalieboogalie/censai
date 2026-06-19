@@ -3,9 +3,10 @@ import { Icon } from '../Icons.jsx';
 import { ThemeWorkbenchPreview } from './ThemePreview.jsx';
 import { AccentSection, MoodSection, SavedPresetsSection } from './ThemeDesignSections.jsx';
 import { FineTuneSection, WorkspaceSection } from './ThemeWorkspaceSection.jsx';
+import { VaultSection } from './VaultSection.jsx';
 import { useThemePanel } from './useThemePanel.js';
 
-export function ThemePanel({ open, onClose, anchor, focusMode, setFocusMode, penMode, setPenMode, onResetWorkspace }) {
+export function ThemePanel({ open, onClose, anchor, focusMode, setFocusMode, penMode, setPenMode, onResetWorkspace, onLogout }) {
   const {
     theme, setTheme, tab, setTab, moodsExpanded, setMoodsExpanded,
     customPresets, savingPreset, setSavingPreset, presetName, setPresetName,
@@ -17,6 +18,10 @@ export function ThemePanel({ open, onClose, anchor, focusMode, setFocusMode, pen
 
   if (!open) return null;
 
+  const panelWidth = tab === 'appearance'
+    ? 'min(1120px, calc(100vw - 28px))'
+    : (tab === 'vault' ? 'min(520px, calc(100vw - 28px))' : 'min(430px, calc(100vw - 28px))');
+
   return (
     <div
       role="dialog"
@@ -25,7 +30,7 @@ export function ThemePanel({ open, onClose, anchor, focusMode, setFocusMode, pen
         top: pos ? pos.y : (anchor?.top ?? 52),
         left: pos ? pos.x : undefined,
         right: pos ? undefined : (anchor?.right ?? 18),
-        width: tab === 'appearance' ? 'min(1120px, calc(100vw - 28px))' : 'min(430px, calc(100vw - 28px))',
+        width: panelWidth,
         maxHeight: 'calc(100vh - 76px)',
         display: 'flex', flexDirection: 'column', borderRadius: 10,
         background: 'var(--surface)', border: '1px solid var(--hairline)',
@@ -74,7 +79,12 @@ export function ThemePanel({ open, onClose, anchor, focusMode, setFocusMode, pen
         )}
         {tab === 'workspace' && (
           <div style={{ overflowY: 'auto', flex: 1 }}>
-            <WorkspaceSection focusMode={focusMode} setFocusMode={setFocusMode} penMode={penMode} setPenMode={setPenMode} onResetWorkspace={onResetWorkspace} />
+            <WorkspaceSection focusMode={focusMode} setFocusMode={setFocusMode} penMode={penMode} setPenMode={setPenMode} onResetWorkspace={onResetWorkspace} onLogout={onLogout} />
+          </div>
+        )}
+        {tab === 'vault' && (
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            <VaultSection />
           </div>
         )}
       </div>

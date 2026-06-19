@@ -1,9 +1,17 @@
 import React from 'react';
 import { renderMarkdown } from '../../lib/renderMarkdown.jsx';
 import { Icon } from '../Icons.jsx';
+import { diffStats } from './toolActivity.js';
+import { ChangeImpactBreadcrumbs } from './ChangeImpactBreadcrumbs.jsx';
 
 export function ChatBubble({ message: m, index, copied, onCopy }) {
   const canCopy = !m.hidden && String(m.text || '').length > 0;
+  
+  // Handler for copying inline code snippets
+  const handleCopyCode = React.useCallback((codeText) => {
+    navigator.clipboard.writeText(codeText).catch(err => console.error('Failed to copy:', err));
+  }, []);
+  
   return (
     <div style={{ display: 'flex', justifyContent: m.hidden ? 'center' : (m.from === 'me' ? 'flex-end' : 'flex-start') }}>
       <div style={{
@@ -49,7 +57,7 @@ export function ChatBubble({ message: m, index, copied, onCopy }) {
         )}
         {m.image && <img src={m.image} alt="attached" style={{ width: '100%', borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--hairline)', userSelect: 'none' }} />}
         <div style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>
-          {m.from === 'me' ? m.text : renderMarkdown(m.text, { compact: true })}
+          {m.from === 'me' ? m.text : renderMarkdown(m.text, { compact: true, onCopyCode: handleCopyCode })}
         </div>
         {m.from !== 'me' && m.activity && <ActivityStrip activity={m.activity} />}
       </div>
@@ -82,15 +90,26 @@ function ActivityStrip({ activity }) {
       </button>
       {open && (
         <div style={{ marginTop: 7, display: 'grid', gap: 6 }}>
-          {activity.tools?.map((tool, i) => (
-            <div key={`${tool.name}-${i}`} style={{ border: '1px solid var(--hairline)', borderRadius: 8, background: 'var(--surface)', padding: '7px 8px', display: 'grid', gap: 4 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 10 }}>
-                <span style={{ color: 'var(--accent-ink)', fontWeight: 800 }}>{tool.name}</span>
-                <span style={{ color: 'var(--ink-faint)' }}>{fmtMs(tool.ms)}</span>
-                {Number.isFinite(tool.resultChars) && <span style={{ color: 'var(--ink-faint)' }}>{tool.resultChars.toLocaleString()} chars</span>}
+          <ChangeImpactBreadcrumbs impact={activity.changeImpact} />
+          {activity.tools?.map((tool, i) => {
+            const stats = diffStats(tool.summary);
+            const detailText = tool.summary?.path || tool.summary?.target;
+            const failed = tool.ok === false;
+            return (
+              <div key={`${tool.name}-${i}`} style={{ border: `1px solid ${failed ? 'var(--ps-red)' : 'var(--hairline)'}`, borderRadius: 8, background: 'var(--surface)', padding: '7px 8px', display: 'grid', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+                  <span style={{ color: failed ? 'var(--ps-red)' : 'var(--accent-ink)', fontWeight: 800 }} data-tool-outcome={failed ? 'failed' : 'ok'}>{failed ? '✗ ' : ''}{tool.name}</span>
+                  {failed && <span style={{ color: 'var(--ps-red)', fontWeight: 700 }}>failed</span>}
+                  {detailText && <span style={{ color: 'var(--ink-soft)', overflowWrap: 'anywhere' }}>{detailText}</span>}
+                  {stats && stats.added > 0 && <span style={{ color: 'var(--accent-ink)', fontWeight: 700 }}>+{stats.added}</span>}
+                  {stats && stats.removed > 0 && <span style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>−{stats.removed}</span>}
+                  {tool.summary?.files > 1 && <span style={{ color: 'var(--ink-faint)' }}>{tool.summary.files} files</span>}
+                  <span style={{ color: 'var(--ink-faint)' }}>{fmtMs(tool.ms)}</span>
+                  {Number.isFinite(tool.resultChars) && <span style={{ color: 'var(--ink-faint)' }}>{tool.resultChars.toLocaleString()} chars</span>}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

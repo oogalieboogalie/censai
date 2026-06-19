@@ -30,3 +30,8 @@ export {
 export { inferLayout, cleanLayout } from './layout/infer.js';
 
 export { getBuiltInPresets, applyPreset } from './layout/presets.js';
+export {
+  buildSemanticWorkspaceLayout,
+  orderWindowsByRole,
+  SEMANTIC_PRESET,
+} from './layout/semantic.js';

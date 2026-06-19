@@ -1,4 +1,3 @@
-
 export async function getToolCatalog() {
     const res = await fetch('/api/tool-catalog');
     const data = await res.json().catch(() => ({}));
@@ -15,3 +14,24 @@ export async function getJulesSessions({ refresh = false, includeCompleted = fal
     if (!res.ok) throw new Error(data?.error || 'Failed to fetch Jules sessions');
     return data;
   }
+
+export async function getSession() {
+  const res = await fetch('/api/auth/session');
+  return res.json().catch(() => ({ authenticated: false }));
+}
+
+export async function logout() {
+  const res = await fetch('/api/auth/logout');
+  return res.json().catch(() => ({ authenticated: false }));
+}
+
+export async function developerLogin({ email, name }) {
+  const res = await fetch('/api/auth/developer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, name }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || 'Login failed');
+  return data;
+}

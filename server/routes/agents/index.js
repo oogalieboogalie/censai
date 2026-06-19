@@ -8,6 +8,9 @@ import { milestonesRouter } from './milestones.js';
 import { goalsRouter } from './goals.js';
 import { familyRouter } from './family.js';
 import { knowledgeRouter } from './knowledge.js';
+import { capabilitiesRouter } from './capabilities.js';
+import { attributesRouter } from './attributes.js';
+import { wakeupsRouter } from './wakeups.js';
 
 export const agentsRouter = express.Router();
 
@@ -20,3 +23,6 @@ agentsRouter.use(milestonesRouter);
 agentsRouter.use(goalsRouter);
 agentsRouter.use(familyRouter);
 agentsRouter.use(knowledgeRouter);
+agentsRouter.use(capabilitiesRouter);
+agentsRouter.use(attributesRouter);
+agentsRouter.use(wakeupsRouter);

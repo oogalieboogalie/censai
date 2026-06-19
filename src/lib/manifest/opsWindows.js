@@ -141,4 +141,22 @@ export const OPS_WINDOW_MANIFESTS = [
     defaultSize: { w: 720, h: 540 },
     launcher: { show: true, order: 170, icon: 'Tools', label: 'Kubernetes', hint: 'read-only cluster view' },
   },
+  {
+    kind: 'toolchainSettings',
+    canvasType: 'toolchainSettings',
+    label: 'Toolchain Settings',
+    componentName: 'ToolchainSettingsWindow',
+    componentPath: 'src/components/ToolchainSettingsWindow.jsx',
+    defaultSize: { w: 520, h: 580 },
+    launcher: { show: true, order: 160, icon: 'Tools', label: 'Toolchains', hint: 'AI CLI tools in sandbox' },
+  },
+  {
+    kind: 'windowImporter',
+    canvasType: 'windowImporter',
+    label: 'Window Importer',
+    componentName: 'WindowImporterWindow',
+    componentPath: 'src/components/WindowImporterWindow.jsx',
+    defaultSize: { w: 560, h: 520 },
+    launcher: { show: true, order: 155, icon: 'Tools', label: 'Import Window', hint: 'drop AI Studio exports onto the canvas' },
+  },
 ];

@@ -13,12 +13,18 @@ import { useCanvasViewport } from './canvas/useCanvasViewport.js';
 import { useCanvasWorkspaceHandlers } from './canvas/useCanvasWorkspaceHandlers.js';
 import { useCanvasZoomControls } from './canvas/useCanvasZoomControls.js';
 import { ZoomHud } from './canvas/CanvasZoomHud.jsx';
+import { useTheme } from './Theme.jsx';
+import { CanvasSelectionOutline } from './canvas/CanvasSelectionOutline.jsx';
+import { getWindowBounds } from '../lib/layoutAlgo.js';
+import { isPointInRect, screenToCanvas } from '../lib/canvasMath.js';
 
-export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, onRubberBand, onRequestNewAgent, onCreateAgent, dockState, pan, zoom, onPanZoom, onFitView, onJumpNearestCluster, canvasGroups = [], onSpawnGroup, onUpdateGroup, onCloseGroup, onMoveGroup, onAutoArrangeGroup, onSaveGroupPreset, onLoadGroupPreset, onDeleteGroupPreset, paths = [], setPaths, links = [], onLinkCreate, onLinkDelete, currentProject = null, activeTool, penColor, penSize, penMode = false, pinnedRailOffset = { top: 24, left: 24 }, suppressEmptyState = false }) {
+export function Canvas({ wins, activeId, selectedIds = [], onUpdate, onClose, onSelect, onSelection, onDeleteSelected, onSpawn, onRubberBand, onRequestNewAgent, onCreateAgent, dockState, pan, zoom, onPanZoom, onFitView, onJumpNearestCluster, canvasGroups = [], onSpawnGroup, onUpdateGroup, onResizeGroup, onCloseGroup, onMoveGroup, onAutoArrangeGroup, onSaveGroupPreset, onLoadGroupPreset, onDeleteGroupPreset, paths = [], setPaths, links = [], onLinkCreate, onLinkDelete, currentProject = null, activeTool, penColor, penSize, penMode = false, pinnedRailOffset = { top: 24, left: 24 }, suppressEmptyState = false }) {
   const ref = React.useRef(null);
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || { canvasPanMode: 'both' };
   const [region, setRegion] = React.useState(null);
   const [wireDrag, setWireDrag] = React.useState(null);
-  const { spaceHeld, spaceRef } = useCanvasViewport({ ref, pan, zoom, onPanZoom });
+  const { spaceHeld, spaceRef } = useCanvasViewport({ ref, pan, zoom, onPanZoom, panMode: theme.canvasPanMode });
   const {
     band,
     setBand,
@@ -27,6 +33,7 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
     onPointerMove,
     onPointerUp,
     panRef,
+    consumeContextMenuSuppression,
   } = useCanvasPointer({
     ref,
     pan,
@@ -34,6 +41,8 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
     onPanZoom,
     onSelect,
     onSpawnGroup,
+    wins,
+    onSelection,
     activeTool,
     penMode,
     penColor,
@@ -41,7 +50,20 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
     setPaths,
     setRegion,
     spaceRef,
+    panMode: theme.canvasPanMode,
   });
+  const handleCanvasContextMenu = React.useCallback((event) => {
+    if (consumeContextMenuSuppression()) return;
+    const isSelectionSurface = event.target.dataset?.canvasBg || event.target.dataset?.canvasContextSurface;
+    if (!isSelectionSurface || selectedIds.length < 2 || !ref.current) return;
+    const selectedBounds = getWindowBounds(wins.filter((win) => selectedIds.includes(win.id)));
+    if (!selectedBounds) return;
+    const point = screenToCanvas(event.clientX, event.clientY, pan.x, pan.y, zoom, ref.current.getBoundingClientRect());
+    if (isPointInRect(point.x, point.y, selectedBounds.x, selectedBounds.y, selectedBounds.w, selectedBounds.h)) {
+      setRegion(null);
+      onDeleteSelected?.(selectedIds);
+    }
+  }, [consumeContextMenuSuppression, onDeleteSelected, pan.x, pan.y, selectedIds, wins, zoom]);
   const handleCapture = useCanvasCapture({ ref, region, setRegion, pan, zoom });
   const { zoomIn, zoomOut, resetView } = useCanvasZoomControls({ ref, pan, zoom, onPanZoom, onFitView });
   const {
@@ -73,6 +95,7 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onCanvasContextMenu={handleCanvasContextMenu}
       pan={pan}
       zoom={zoom}
       activeTool={activeTool}
@@ -82,6 +105,7 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
         <CanvasWindows
           wins={wins}
           activeId={activeId}
+          selectedIds={selectedIds}
           zoom={zoom}
           pan={pan}
           offset={pinnedRailOffset}
@@ -100,6 +124,19 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
           onWireEnd={handleWireEnd}
         />
       </>}
+      overlayChildren={
+        <CanvasRegionActions
+          region={region}
+          zoom={zoom}
+          wins={wins}
+          setRegion={setRegion}
+          onRubberBand={onRubberBand}
+          onSpawn={onSpawn}
+          onSpawnGroup={onSpawnGroup}
+          onRequestNewAgent={onRequestNewAgent}
+          onCapture={handleCapture}
+        />
+      }
     >
         <CanvasMarks zoom={zoom} pan={pan} />
 
@@ -120,6 +157,7 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
           zoom={zoom}
           onUpdate={onUpdate}
           onUpdateGroup={onUpdateGroup}
+          onResizeGroup={onResizeGroup}
           onCloseGroup={onCloseGroup}
           onMoveGroup={onMoveGroup}
           onGroupDragEnd={handleGroupDragEnd}
@@ -128,28 +166,13 @@ export function Canvas({ wins, activeId, onUpdate, onClose, onSelect, onSpawn, o
           onLoadGroupPreset={onLoadGroupPreset}
           onDeleteGroupPreset={onDeleteGroupPreset}
         />
+        <CanvasSelectionOutline wins={wins} selectedIds={selectedIds} zoom={zoom} />
         <CanvasWires wins={wins} dockState={dockState} pan={pan} zoom={zoom} />
 
         {wins.length === 0 && !band && !region && !suppressEmptyState && <EmptyState onSpawn={onSpawn} />}
         <CanvasRubberBand band={band} zoom={zoom} />
-
-        <CanvasRegionActions
-          region={region}
-          zoom={zoom}
-          wins={wins}
-          setRegion={setRegion}
-          onRubberBand={onRubberBand}
-          onSpawn={onSpawn}
-          onSpawnGroup={onSpawnGroup}
-          onRequestNewAgent={onRequestNewAgent}
-          onCapture={handleCapture}
-        />
     </CanvasShell>
 
     <ZoomHud zoom={zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} onJumpNearestCluster={onJumpNearestCluster} />
   </>);
 }
-
-
-
-

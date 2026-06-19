@@ -81,6 +81,7 @@ export function AgentDesignerWindow({ win, onUpdate, onCreateAgent, groups = [] 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Field label="Provider">
                   <select value={provider} onChange={e => { setProvider(e.target.value); setModel(defaultModelForProvider(e.target.value)); }} style={darkInputStyle}>
+                    <option value="cohere">Cohere</option>
                     <option value="google">Google API</option>
                     <option value="moonshot">Moonshot API</option>
                     <option value="openrouter">OpenRouter</option>

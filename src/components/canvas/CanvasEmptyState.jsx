@@ -61,7 +61,7 @@ export function EmptyState({ onSpawn }) {
         />
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 18 }}>· Censai ·</div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 600, lineHeight: 1.05, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 14 }}>An infinite canvas<br/>for you and your agents.</div>
-        <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.55, maxWidth: 380, margin: '0 auto 28px' }}>Spin up a window, drag an agent in from the pink rail on the right, and design the work around the project — not the other way around.</div>
+        <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.55, maxWidth: 380, margin: '0 auto 28px' }}>Spin up a window, drag an agent in from the rail on the right, and design the work around the project — not the other way around.</div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           {LAUNCHER_MANIFESTS.map((m) => {
             const L = m.launcher;

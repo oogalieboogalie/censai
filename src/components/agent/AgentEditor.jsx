@@ -18,7 +18,7 @@ export function AgentEditor({
 
   const filteredToolRows = (toolCatalog.tools || []).filter(tool => {
     if (draftTools.includes(tool.name)) return false;
-    const needle = `${tool.label} ${tool.name} ${tool.description} ${tool.category}`.toLowerCase();
+    const needle = `${tool.label} ${tool.name} ${tool.description} ${tool.category} ${tool.type} ${tool.kit} ${(tool.tags || []).join(' ')}`.toLowerCase();
     return needle.includes(toolSearch.toLowerCase());
   }).slice(0, 18);
 
@@ -26,6 +26,7 @@ export function AgentEditor({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', gap: 6 }}>
         <select value={draftProvider} onChange={e => { const provider = e.target.value; setDraftProvider(provider); setDraftModel(defaultModelForProvider(provider)); }} style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid oklch(0.62 0.14 ${agent.hue})`, background: 'var(--surface-2)', color: 'var(--ink)', fontSize: 12, outline: 'none' }}>
+          <option value="cohere">Cohere (North / Command)</option>
           <option value="ollama">Ollama (Local)</option>
           <option value="openrouter">OpenRouter (Cloud)</option>
           <option value="google">Google API (Gemini)</option>
@@ -59,7 +60,7 @@ export function AgentEditor({
             {filteredToolRows.map(tool => (
               <button key={tool.name} onClick={() => toggleTool(tool.name)} title={tool.description} style={{ all: 'unset', cursor: 'pointer', padding: '7px 8px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--hairline)', color: 'var(--ink-soft)', fontSize: 11 }}>
                 <strong style={{ color: 'var(--ink)' }}>{tool.label}</strong>
-                <span style={{ marginLeft: 6, color: 'var(--ink-faint)' }}>{tool.category}</span>
+                <span style={{ marginLeft: 6, color: 'var(--ink-faint)' }}>{tool.kit || tool.category}</span>
               </button>
             ))}
           </div>

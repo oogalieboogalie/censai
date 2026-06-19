@@ -5,7 +5,7 @@ import { prepareChatContext } from './chatContext.js';
 import { runChatLoop } from './chatExecution.js';
 
 export async function handleChat(req, res) {
-  const { messages, agentId, windowId, currentProject, stream } = req.body;
+  const { messages, agentId, windowId, workspaceId, currentProject, stream } = req.body;
   const startedAt = Date.now();
   const timings = {
     total_ms: 0,
@@ -46,17 +46,19 @@ export async function handleChat(req, res) {
   try {
     const setupStartedAt = Date.now();
     const {
-      reqModel, reqBaseUrl, reqApiKey, chatMessages, toolsForCaller
-    } = await prepareChatContext(agentId, currentProject, messages);
+      reqModel, reqBaseUrl, reqApiKey, reqProvider, chatMessages, toolsForCaller, changeImpact
+    } = await prepareChatContext(agentId, currentProject, messages, req.session?.userId, req.session?.userRole);
     timings.setup_ms = Date.now() - setupStartedAt;
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Perf] Chat setup (prepareChatContext) for agent ${agentId} took ${timings.setup_ms}ms`);
     }
 
     sendEvent({ type: 'status', status: 'thinking', detail: { round: 1 } });
+    if (changeImpact) sendEvent({ type: 'change_impact', impact: changeImpact });
 
     const { finalText, toolActions } = await runChatLoop({
-      agentId, windowId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, sendEvent, timings
+      agentId, windowId, workspaceId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, reqProvider, sendEvent, timings,
+      userId: req.session?.userId
     });
 
     // Log conversation
@@ -81,6 +83,7 @@ export async function handleChat(req, res) {
         text: finalText,
         tools: safeTools,
         timings: safeTimings,
+        changeImpact,
       });
       res.end();
     } else {
@@ -88,6 +91,7 @@ export async function handleChat(req, res) {
         text: finalText,
         tools: safeTools,
         timings: safeTimings,
+        changeImpact,
       });
     }
   } catch (err) {

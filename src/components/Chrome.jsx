@@ -1,15 +1,15 @@
 import React from 'react';
 import { Icon } from './Icons.jsx';
-import { WindowMenu } from './topbar/WindowMenu.jsx';
-import { ToolBtn, PSButton } from './chrome/Buttons.jsx';
+import { PSButton } from './chrome/Buttons.jsx';
 import { FileMenu } from './chrome/FileMenu.jsx';
+import { WindowMenu } from './topbar/WindowMenu.jsx';
 
-export function Chrome({ 
-  onNewAgent, onNewWindow, onNewWorkflow, onNewTerminal, onNewHtmlPreview, 
-  onSpawnRook, onNewMailcow, onNewVex, onSpawn, onToggleFocus, 
+export function Chrome({
+  onNewTerminal, onNewHtmlPreview,
+  onSpawnRook, onNewMailcow, onNewVex, onSpawn, onToggleFocus,
   focusMode, penMode = false, onTogglePenMode, projectName, currentProject, 
   onOpenLocalProject, onOpenSettings, onMin, onMax, onClose, presets = [], 
-  onSaveAsPreset, onLoadPreset, onDeletePreset 
+  onSaveAsPreset, onLoadPreset, onDeletePreset, windowControlState = null,
 }) {
   const [idle, setIdle] = React.useState(false);
   const [folded, setFolded] = React.useState(false);
@@ -25,6 +25,12 @@ export function Chrome({
 
   const fade = idle || focusMode;
 
+  const maximizeTitle = windowControlState?.maximizeTitle || (focusMode ? 'Exit focus' : 'Focus mode');
+  const minimizeTitle = windowControlState?.minimizeTitle || 'Minimize';
+  const closeTitle = windowControlState?.closeTitle || 'Close';
+  const showWindowMaximize = windowControlState?.showWindowMaximize || false;
+  const activeWindow = windowControlState?.activeWindow || null;
+
   return (
     <>
       <div style={{ position: 'fixed', top: 0, left: '50%', transform: `translateX(-50%) translateY(${folded ? '-100%' : '0'})`, transition: 'transform 0.4s cubic-bezier(.4,.0,.2,1), opacity 0.4s', opacity: fade ? 0 : 1, zIndex: 50 }}
@@ -34,17 +40,6 @@ export function Chrome({
           <button title="File menu" onClick={() => setShowFiles(s => !s)} style={{ all: 'unset', cursor: 'pointer', width: 26, height: 26, borderRadius: 8, display: 'grid', placeItems: 'center', color: 'var(--ink-soft)', background: showFiles ? 'var(--surface-2)' : 'transparent' }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
           </button>
-          <div style={{ width: 1, height: 18, background: 'var(--hairline)' }} />
-          <ToolBtn onClick={onNewAgent} label="New agent" icon={<Icon.NewAgent size={18}/>} accent="var(--ps-pink)" />
-          <ToolBtn onClick={onNewWindow} label="New window" icon={<Icon.NewWindow size={18}/>} accent="var(--ps-blue)" />
-          <ToolBtn onClick={onNewWorkflow} label="New workflow" icon={<Icon.NewWorkflow size={18}/>} accent="var(--ps-green)" />
-          <ToolBtn onClick={onNewTerminal} label="Terminal" icon={<Icon.Terminal size={18}/>} accent="var(--ps-green)" />
-          <ToolBtn onClick={onNewHtmlPreview} label="HTML preview" icon={<Icon.Eye size={18}/>} accent="var(--ps-green)" />
-          <ToolBtn onClick={onNewVex} label="Vex Orchestrator" icon={
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          } accent="#a855f7" />
           <div style={{ width: 1, height: 18, background: 'var(--hairline)' }} />
           <WindowMenu onSpawn={onSpawn} />
           <div style={{ width: 1, height: 18, background: 'var(--hairline)' }} />
@@ -92,9 +87,13 @@ export function Chrome({
             </svg>
           </button>
           <div style={{ width: 1, height: 18, background: 'var(--hairline)' }} />
-          <PSButton color="var(--ps-green)" title="Minimize" onClick={onMin}><Icon.Minimize size={11} stroke={2.4}/></PSButton>
-          <PSButton color="var(--ps-blue)" title={focusMode ? 'Exit focus' : 'Focus mode'} onClick={onToggleFocus}>{focusMode ? <Icon.Eye size={10}/> : <Icon.Maximize size={10} stroke={2.2}/>}</PSButton>
-          <PSButton color="var(--ps-red)" title="Close" onClick={onClose}><Icon.Close size={10} stroke={2.4}/></PSButton>
+          <PSButton color="var(--ps-green)" title={minimizeTitle} onClick={onMin}><Icon.Minimize size={11} stroke={2.4}/></PSButton>
+          <PSButton color="var(--ps-blue)" title={maximizeTitle} onClick={onMax}>
+            {showWindowMaximize
+              ? (activeWindow?.maximized ? <Icon.Restore size={10} /> : <Icon.Maximize size={10} stroke={2.2} />)
+              : (focusMode ? <Icon.Eye size={10} /> : <Icon.Maximize size={10} stroke={2.2} />)}
+          </PSButton>
+          <PSButton color="var(--ps-red)" title={closeTitle} onClick={onClose}><Icon.Close size={10} stroke={2.4}/></PSButton>
         </div>
       </div>
       {projectName && <div style={{ position: 'fixed', top: 14, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', zIndex: 5, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-faint)', opacity: 0.55 }}>{projectName}</div>}

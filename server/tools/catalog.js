@@ -1,4 +1,5 @@
 import { TOOL_DEFINITIONS } from './definitions.js';
+import { metadataForTool } from './toolMetadata.js';
 
 export const TOOL_CATALOG_OVERRIDES = {
   web_search: { label: 'Tavily Search', category: 'Research', provider: 'Tavily', scopeKind: 'web' },
@@ -86,11 +87,13 @@ export function listToolCatalog() {
   const tools = TOOL_DEFINITIONS.map(tool => {
     const name = tool.function.name;
     const override = TOOL_CATALOG_OVERRIDES[name] || {};
+    const category = override.category || categoryForTool(name);
     return {
       name,
       label: override.label || titleizeToolName(name),
       description: tool.function.description || '',
-      category: override.category || categoryForTool(name),
+      category,
+      ...metadataForTool(name, category, tool.function.description),
       provider: override.provider || null,
       scopeKind: override.scopeKind || 'none',
       risk: override.risk || 'read',
@@ -104,5 +107,11 @@ export function listToolCatalog() {
     tools: tools.filter(tool => tool.category === category),
   }));
 
-  return { tools, categories };
+  const kits = [...new Set(tools.map(tool => tool.kit))].map(kit => ({
+    id: kit.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    label: kit,
+    tools: tools.filter(tool => tool.kit === kit),
+  }));
+
+  return { tools, categories, kits };
 }

@@ -2,12 +2,13 @@ import pool from '../../db.js';
 import { TERMINAL_TASK_STATUSES, buildCompletionReceipt } from './receipts.js';
 
 export async function createAgentTask(task) {
-  const { parentId, assigneeId, projectId, project, title, prompt, priority, batchId, batchLabel } = task;
+  const { parentId, assigneeId, projectId, project, title, prompt, priority, batchId, batchLabel, wakeId } = task;
   const { rows } = await pool.query(
-    `INSERT INTO agent_tasks (parent_id, assignee_id, project_id, project, title, prompt, priority, batch_id, batch_label)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO agent_tasks (parent_id, assignee_id, project_id, project, title, prompt, priority, batch_id, batch_label, wake_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
-    [parentId, assigneeId, projectId, project, title, prompt, priority || 'normal', batchId || null, batchLabel || null]
+    [parentId, assigneeId, projectId, project, title, prompt, priority || 'normal',
+     batchId || null, batchLabel || null, wakeId || null]
   );
   return rows[0];
 }

@@ -5,8 +5,6 @@ import {
   getAgent,
   upsertAgent,
 } from '../../memory.js';
-
-
 import { listToolCatalog } from '../../tools.js';
 
 export const coreRouter = express.Router();
@@ -78,3 +76,5 @@ coreRouter.put('/agents/:id', requireDb, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+

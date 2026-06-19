@@ -9,35 +9,89 @@ function greet(name) {
 
 console.log(greet('Censai'));`;
 
-function lineCount(value) {
-  return Math.max(1, String(value || '').split('\n').length);
-}
+const codeContentCache = new Map();
+
+const lineCount = (value) => Math.max(1, String(value || '').split('\n').length);
 
 export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
   const [code, setCode] = React.useState(win.code || DEFAULT_CODE);
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
   const lines = React.useMemo(() => Array.from({ length: lineCount(code) }, (_, i) => i + 1), [code]);
   const [showSettings, setShowSettings] = useState(false);
   const theme = win.editorTheme || { ...DEFAULT_THEME };
+  const fileLabel = win.fileName || win.title || 'Code Editor';
+  const sourceLabel = win.filePath ? (win.isGithub ? 'github' : 'local file') : 'plain text';
 
-  const handleThemeChange = useCallback((newTheme) => {
-    onUpdate({ editorTheme: newTheme });
-  }, [onUpdate]);
+  const handleThemeChange = useCallback((newTheme) => onUpdate({ editorTheme: newTheme }), [onUpdate]);
 
   React.useEffect(() => {
-    if (typeof win.code === 'string' && win.code !== code) {
-      setCode(win.code);
-    }
+    if (typeof win.code === 'string' && win.code !== code) setCode(win.code);
   }, [win.code]);
+
+  React.useEffect(() => {
+    if (!win.filePath) return;
+
+    const url = win.isGithub
+      ? `/api/github/file?repo=${encodeURIComponent(win.githubRepo)}&path=${encodeURIComponent(win.filePath)}`
+      : `/api/files/content?path=${encodeURIComponent(win.filePath)}`;
+
+    if (codeContentCache.has(url)) {
+      const cached = codeContentCache.get(url);
+      setCode(cached);
+      onUpdate?.({ code: cached });
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.error) throw new Error(data.error);
+        const next = data.content || '';
+        codeContentCache.set(url, next);
+        setCode(next);
+        onUpdate?.({ code: next });
+        setLoading(false);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setCode(`Failed to load file: ${err.message}`);
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [win.filePath, win.isGithub, win.githubRepo]);
 
   const updateCode = (next) => {
     setCode(next);
     onUpdate?.({ code: next });
   };
 
+  const saveFile = async () => {
+    if (!win.filePath || win.isGithub) return;
+    setSaving(true);
+    try {
+      await fetch('/api/files/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: win.filePath, content: code })
+      });
+      const url = `/api/files/content?path=${encodeURIComponent(win.filePath)}`;
+      codeContentCache.set(url, code);
+    } catch (e) {
+      console.error('Failed to save code file:', e);
+    }
+    setSaving(false);
+  };
+
   const previewAsHtml = () => {
     onSpawn?.('htmlPreview', {
       title: 'HTML Preview',
-      fileName: `${win.title || 'code'}.html`,
+      fileName: /\.html?$/i.test(fileLabel) ? fileLabel : `${fileLabel}.html`,
       html: code,
     });
   };
@@ -59,9 +113,21 @@ export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
         flexShrink: 0,
       }}>
         <span style={{ color: 'var(--ps-blue)', display: 'flex' }}><Icon.Code size={14} /></span>
-        <span>{win.title || 'Code Editor'}</span>
-        <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--ink-faint)', fontWeight: 400 }}>plain text</span>
+        <span>{fileLabel}</span>
+        <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--ink-faint)', fontWeight: 400 }}>{loading ? 'loading...' : sourceLabel}</span>
+        {win.language && <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--ink-faint)', fontWeight: 400 }}>· {win.language}</span>}
+        {win.isGithub && <span style={{ fontSize: 9, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--ink)' }}>{win.githubRepo}</span>}
         <div style={{ flex: 1 }} />
+        {win.filePath && !win.isGithub && (
+          <button
+            onClick={(e) => { e.stopPropagation(); saveFile(); }}
+            disabled={saving}
+            title="Save local file"
+            style={{ all: 'unset', cursor: saving ? 'wait' : 'pointer', color: 'var(--accent-ink)', border: '1px solid var(--hairline)', borderRadius: 7, padding: '4px 7px', textTransform: 'none', letterSpacing: 0, fontSize: 11, fontWeight: 700, opacity: saving ? 0.5 : 1 }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        )}
         <button
           onClick={() => setShowSettings(!showSettings)}
           onPointerDown={(e) => e.stopPropagation()}
