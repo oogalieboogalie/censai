@@ -1,5 +1,6 @@
 import pool from '../../db.js';
-import { getUserState, setUserState, WORKSPACE_STATE_KEY } from '../../state/clientStateStore.js';
+import { getWorkspaceState, setWorkspaceState, WORKSPACE_STATE_KEY } from '../../state/clientStateStore.js';
+import { requireWorkspaceMember } from '../../workspaces/context.js';
 
 function requireWorkspaceContext(context) {
   if (!context.workspaceId) throw new Error('workspaceId is required');
@@ -31,11 +32,15 @@ export const workspaceCommands = [
     async handler({ context, input }) {
       requireWorkspaceContext(context);
       const key = input.key || WORKSPACE_STATE_KEY;
-      const result = await getUserState({ db: pool, userId: context.userId, key });
+      await requireWorkspaceMember(pool, {
+        userId: context.userId,
+        workspaceId: context.workspaceId,
+      });
+      const result = await getWorkspaceState({ db: pool, workspaceId: context.workspaceId, key });
       return {
         key,
         workspaceId: context.workspaceId,
-        storageScope: 'user',
+        storageScope: 'workspace',
         found: result.found,
         value: result.value,
       };
@@ -67,12 +72,22 @@ export const workspaceCommands = [
     async handler({ context, input }) {
       requireWorkspaceContext(context);
       const key = input.key || WORKSPACE_STATE_KEY;
-      await setUserState({ db: pool, userId: context.userId, key, value: input.value ?? null });
+      await requireWorkspaceMember(pool, {
+        userId: context.userId,
+        workspaceId: context.workspaceId,
+        roles: ['owner', 'admin', 'member'],
+      });
+      await setWorkspaceState({
+        db: pool,
+        workspaceId: context.workspaceId,
+        key,
+        value: input.value ?? null,
+      });
       return {
         ok: true,
         key,
         workspaceId: context.workspaceId,
-        storageScope: 'user',
+        storageScope: 'workspace',
       };
     },
   },

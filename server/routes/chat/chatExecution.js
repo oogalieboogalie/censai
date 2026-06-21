@@ -1,28 +1,43 @@
+import pool from '../../db.js';
 import { executeTool, TOOL_DEFINITIONS } from '../../tools.js';
 import { callModel, workspaceUsageSink } from '../../aiGateway/index.js';
-import {
-  MAX_CHAT_MODEL_ROUNDS, FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS, extractMessageText
-} from './shared.js';
-import {
-  shouldSynthesizeAfterToolBatch,
-  buildToolSynthesisPrompt, summarizeToolActions
-} from './prompts.js';
+import { MAX_CHAT_MODEL_ROUNDS, FORCE_TOOL_SYNTHESIS_AFTER_ROUNDS, extractMessageText } from './shared.js';
+import { shouldSynthesizeAfterToolBatch, buildToolSynthesisPrompt, summarizeToolActions } from './prompts.js';
 import { withLongcatToolCallFallback } from './longcatToolCalls.js';
 import { processAgentMarkers } from './markers.js';
 import { summarizeToolCall } from './toolSummary.js';
 import { toolCallOk } from './toolOutcome.js';
 import { detectUnexecutedClaims } from './claimTripwire.js';
+import { runVulnerabilityTripwire, detectVulnerabilities } from './vulnerabilityTripwire.js';
+import { evaluatePolicy } from '../../policy/engine.js';
+import { recordPolicyEvidence } from '../../policy/evidence.js';
+import { recordTraceRound, recordToolTrace, recordTraceFailure } from '../../operational-intelligence/traces.js';
+import { createChatToolSession } from './toolSession.js';
 
 const PRIVATE_TOOLS = ['journal', 'read_journal', 'read_journal_search'];
 
 export async function runChatLoop({
-  agentId, windowId, workspaceId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, reqProvider, sendEvent, timings, userId
+  agentId,
+  windowId,
+  workspaceId = 'default',
+  chatMessages,
+  toolsForCaller,
+  reqModel,
+  reqBaseUrl,
+  reqApiKey,
+  reqProvider,
+  sendEvent,
+  timings,
+  userId,
+  traceId
 }) {
   let toolActions = [];
   let finalText = '';
   let synthesisRequested = false;
   let synthesisReason = null;
   let round = 0;
+  const toolSession = createChatToolSession(toolsForCaller, reqProvider);
+  if (toolSession.prompt) chatMessages.splice(1, 0, { role: 'system', content: toolSession.prompt });
 
   for (;;) {
     round += 1;
@@ -33,11 +48,24 @@ export async function runChatLoop({
     if (round > 1) {
       sendEvent({ type: 'status', status: 'thinking', detail: { round } });
     }
+
+    const activeTools = toolSession.list();
+    if (traceId) {
+      recordTraceRound({ db: pool }, {
+        workspaceId,
+        traceId,
+        round,
+        messages: chatMessages,
+        toolsAvailable: activeTools,
+        modelConfig: { model: reqModel, baseUrl: reqBaseUrl }
+      }).catch(err => console.error('Failed to record trace round:', err.message));
+    }
+
     const body = {
       model: reqModel,
       max_tokens: 4096,
       messages: chatMessages,
-      ...(toolsForCaller && !synthesisRequested ? { tools: toolsForCaller } : {}),
+      ...(activeTools.length > 0 && !synthesisRequested ? { tools: activeTools } : {}),
     };
 
     const modelStartedAt = Date.now();
@@ -63,7 +91,7 @@ export async function runChatLoop({
       round,
       ms: modelMs,
       messages: chatMessages.length,
-      tools_available: toolsForCaller?.length || 0,
+      tools_available: activeTools.length,
       synthesis_requested: synthesisRequested,
       synthesis_reason: synthesisReason,
     });
@@ -102,18 +130,70 @@ export async function runChatLoop({
           args.__window_id = windowId;
         }
 
+        // Pass provenance metadata to tool handlers
+        args.__provenance = {
+          agent_id: agentId,
+          model: reqModel,
+          prompt: chatMessages[chatMessages.length - 1]?.content || '',
+        };
+
         const isPrivate = PRIVATE_TOOLS.includes(toolName);
         const summary = isPrivate ? null : summarizeToolCall(toolName, args);
-        sendEvent({ type: 'status', status: 'calling_tool', detail: { tool: toolName, args: isPrivate ? {} : args, ...(summary ? { summary } : {}) } });
+
+        // Security Gate: Automatic Policy Evaluation for high-impact tools
+        const highImpactTools = ['local_write_file', 'github_write_file', 'postgres_query', 'sandbox_exec', 'container_restart'];
+        let policyResult = { decision: 'allow' };
+        if (highImpactTools.includes(toolName)) {
+          policyResult = await evaluatePolicy(toolName, args);
+          await recordPolicyEvidence({ db: (await import('../../db.js')).default }, {
+            policyResult,
+            actionType: toolName,
+            actor: { kind: 'agent', id: agentId },
+            resourceId: args.path || args.file_path || args.repo || args.serviceName,
+            inputData: args,
+            workspaceId: 'global' // TODO: pass actual workspaceId if available
+          });
+        }
+
+        sendEvent({ type: 'status', status: 'calling_tool', detail: { tool: toolName, args: isPrivate ? {} : args, ...(summary ? { summary } : {}), policy: policyResult } });
 
         const toolStartedAt = Date.now();
-        const result = argError
-          ? `${argError}. Call ${toolName} again with the required arguments.`
-          : await executeTool(agentId, toolName, args, { userId });
+        let result;
+        try {
+          result = argError
+            ? `${argError}. Call ${toolName} again with the required arguments.`
+            : policyResult.decision === 'deny'
+              ? `Policy Denied: ${policyResult.reason}`
+              : await executeTool(agentId, toolName, args, { userId });
+        } catch (toolErr) {
+          result = `Tool execution error: ${toolErr.message}`;
+          if (traceId) {
+            recordTraceFailure({ db: pool }, {
+              workspaceId,
+              traceId,
+              error: toolErr,
+              contextSnapshot: { toolName, args, chatMessagesCount: chatMessages.length }
+            }).catch(e => console.error('Failed to record tool failure trace:', e.message));
+          }
+        }
         const toolMs = Date.now() - toolStartedAt;
         timings.tool_ms += toolMs;
         const ok = toolCallOk(result);
+        toolSession.observe(toolName, args, ok);
         sendEvent({ type: 'status', status: 'completed_tool', detail: { tool: toolName, ms: toolMs, ok, ...(summary ? { summary } : {}) } });
+
+        if (traceId) {
+          recordToolTrace({ db: pool }, {
+            workspaceId,
+            traceId,
+            toolName,
+            args,
+            result,
+            ms: toolMs,
+            ok,
+            round,
+          }).catch(err => console.error('Failed to record tool trace:', err.message));
+        }
 
         const safeResult = isPrivate ? '[private]' : result;
         const resultText = typeof safeResult === 'string' ? safeResult : JSON.stringify(safeResult);
@@ -198,6 +278,23 @@ export async function runChatLoop({
   if (unexecutedClaimWarning) {
     finalText = `${finalText}\n\n${unexecutedClaimWarning}`;
     sendEvent({ type: 'status', status: 'unexecuted_claim' });
+  }
+
+  // Embedded Validation Pipeline: Real-time vulnerability scanning
+  const tripwireResult = await runVulnerabilityTripwire(agentId, finalText, userId);
+  finalText = tripwireResult.finalText;
+  if (tripwireResult.issues.length > 0) {
+    sendEvent({ type: 'status', status: 'security_warning', detail: { count: tripwireResult.issues.length } });
+  }
+
+  const vulnerabilityResult = await detectVulnerabilities(finalText);
+  if (vulnerabilityResult) {
+    if (vulnerabilityResult.blocked) {
+      finalText = vulnerabilityResult.text;
+    } else {
+      finalText = `${finalText}\n\n${vulnerabilityResult.text}`;
+    }
+    sendEvent({ type: 'status', status: vulnerabilityResult.blocked ? 'vulnerability_blocked' : 'vulnerability_detected' });
   }
 
   return { finalText, toolActions };

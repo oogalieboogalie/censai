@@ -25,9 +25,12 @@ function response() {
 
 describe('runtime mode middleware', () => {
   test('resolves explicit, local, and production runtime modes', () => {
+    process.env.CENSAI_MODE = RUNTIME_MODES.LOCAL_DESKTOP;
     process.env.HOMEBASE_MODE = RUNTIME_MODES.PRIVATE_SERVER;
-    expect(getRuntimeMode()).toBe(RUNTIME_MODES.PRIVATE_SERVER);
+    expect(getRuntimeMode()).toBe(RUNTIME_MODES.LOCAL_DESKTOP);
 
+    delete process.env.CENSAI_MODE;
+    expect(getRuntimeMode()).toBe(RUNTIME_MODES.PRIVATE_SERVER);
     delete process.env.HOMEBASE_MODE;
     process.env.NODE_ENV = 'production';
     expect(getRuntimeMode()).toBe(RUNTIME_MODES.CLOUD_SAAS);

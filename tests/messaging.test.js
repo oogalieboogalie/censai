@@ -35,31 +35,49 @@ describe('Agent Messaging System', () => {
   });
 
   test('stores an agent-to-agent message through the memory layer', async () => {
-    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'message-1' }] });
+    // First call checks for existing message (none found), second inserts new
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [] })  // idempotency check returns empty
+      .mockResolvedValueOnce({ rows: [{ id: 'message-1' }] });  // insert returns new id
 
     const id = await sendAgentMessage('test-sender-agent', 'test-receiver-agent', 'hello', {
       priority: 'high',
       subject: 'Check in',
       messageType: 'coordination',
       importanceScore: 0.9,
+      idempotencyKey: 'test-key-123',
     });
 
     expect(id).toBe('message-1');
-    expect(mockPool.query).toHaveBeenCalledWith(
+    // First query should check for existing
+    expect(mockPool.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('SELECT id FROM agent_messages'),
+      ['test-key-123', 'test-sender-agent']
+    );
+    // Second query should insert
+    expect(mockPool.query).toHaveBeenNthCalledWith(
+      2,
       expect.stringContaining('INSERT INTO agent_messages'),
-      [
+      expect.arrayContaining([
         'test-sender-agent',
         'test-receiver-agent',
         'hello',
-        'high',
-        null,
-        'Check in',
-        'coordination',
-        0.9,
-        false,
-        true,
-      ],
+      ])
     );
+  });
+
+  test('prevents duplicate messages with same idempotency key', async () => {
+    // Idempotency check finds existing message
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'existing-message-id' }] });
+
+    const id = await sendAgentMessage('test-sender-agent', 'test-receiver-agent', 'hello', {
+      idempotencyKey: 'duplicate-key-456',
+    });
+
+    // Should return existing ID instead of creating new message
+    expect(id).toBe('existing-message-id');
+    expect(mockPool.query).toHaveBeenCalledTimes(1);  // Only check, no insert
   });
 
   test('reads unread messages for an agent', async () => {

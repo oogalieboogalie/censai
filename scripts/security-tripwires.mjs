@@ -103,6 +103,16 @@ for (const file of files) {
       if (file.startsWith('src/') && /child_process/.test(ln)) {
         flag(file, n, 'browser-spawn', 'child_process referenced in client code');
       }
+
+      // Compliance/PII leakage: common patterns that should not be in AI prompts or source code.
+      // 1. Credit Card (Luhn-like patterns)
+      if (/\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\d{3})\d{11})\b/.test(ln)) {
+        flag(file, n, 'compliance-pii', 'potential credit card number detected');
+      }
+      // 2. SSN (approximate)
+      if (/\b\d{3}-\d{2}-\d{4}\b/.test(ln)) {
+        flag(file, n, 'compliance-pii', 'potential Social Security Number detected');
+      }
     }
 
     // pull_request_target with checkout of PR code = secrets exfiltration.

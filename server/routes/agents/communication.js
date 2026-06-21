@@ -11,9 +11,15 @@ export const communicationRouter = express.Router();
 
 communicationRouter.post('/messages', requireDb, async (req, res) => {
   try {
-    const { fromAgent, toAgent, content, priority, threadId, subject, messageType } = req.body;
+    const { fromAgent, toAgent, content, priority, threadId, subject, messageType, idempotencyKey } = req.body;
     if (!fromAgent || !content) return res.status(400).json({ error: 'fromAgent and content required' });
-    const id = await sendAgentMessage(fromAgent, toAgent || null, content, { priority, threadId, subject, messageType });
+    const id = await sendAgentMessage(fromAgent, toAgent || null, content, { 
+      priority, 
+      threadId, 
+      subject, 
+      messageType,
+      idempotencyKey 
+    });
     res.json({ id });
   } catch (err) {
     res.status(500).json({ error: err.message });

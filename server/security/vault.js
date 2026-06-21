@@ -1,11 +1,13 @@
 import { hkdfSync, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import {
+  optionalSecret,
+  requireProductionSecret,
+} from '../secrets.js';
 
 function masterSecret() {
-  if (process.env.JOURNAL_SECRET) return process.env.JOURNAL_SECRET;
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JOURNAL_SECRET is required to use the API key vault');
-  }
-  return 'homebase-family-sanctuary-default-key';
+  return requireProductionSecret('JOURNAL_SECRET')
+    || optionalSecret('JOURNAL_SECRET')
+    || 'homebase-family-sanctuary-default-key';
 }
 
 function deriveUserKey(userId) {

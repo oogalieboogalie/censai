@@ -19,6 +19,7 @@ import {
   isGoogleNativeChatProvider,
   requestGeminiNativeChatCompletion,
 } from './geminiNativeChat.js';
+import { prepareCohereToolPayload } from './cohereTools.js';
 
 export const aiGatewayLog = createLogger('ai');
 export const CHAT_COMPLETION_TIMEOUT_MS = Math.max(
@@ -35,7 +36,10 @@ export async function requestChatCompletion({
   usageAttribution = null,
   usageSink = null,
 } = {}) {
-  const payload = config?.model && !body?.model ? { ...body, model: config.model } : body;
+  const modelPayload = config?.model && !body?.model ? { ...body, model: config.model } : body;
+  const payload = config?.provider === 'cohere'
+    ? prepareCohereToolPayload(modelPayload)
+    : modelPayload;
   const baseUrl = normalizeBaseUrl(config?.baseUrl || DEFAULT_CHAT_BASE_URL);
   let apiKey = config?.apiKey;
   if (!apiKey && !['cohere', 'openrouter', 'moonshot', 'kimi'].includes(config?.provider)) {

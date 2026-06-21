@@ -1,6 +1,7 @@
 import { operationalCommands } from './definitions/operational.js';
 import { windowCommands } from './definitions/windows.js';
 import { workspaceCommands } from './definitions/workspace.js';
+import { checkCommandCapabilities } from '../capabilities/checkCapability.js';
 
 const COMMANDS = [
   ...workspaceCommands,
@@ -33,6 +34,7 @@ export function getCommand(commandId) {
 export async function executeCommand(commandId, execution) {
   const command = getCommand(commandId);
   if (!command) throw new Error(`Unknown command: ${commandId}`);
+  checkCommandCapabilities(command, execution.context);
   const result = await command.handler(execution);
   return { command: toMetadata(command), result };
 }

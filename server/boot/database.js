@@ -6,9 +6,12 @@ import { ensureJulesTaskSyncSchema } from '../jules-task-sync/index.js';
 import { ensureMultiUserSchema } from './authSchema.js';
 import { ensureCapabilitySchema } from './capabilitySchema.js';
 import { ensureAttributeSchema } from './attributeSchema.js';
+import { ensurePolicySchema } from '../policy/schema.js';
 import { ensureUserApiKeySchema } from './userApiKeySchema.js';
 import { ensureAgentWakeupSchema } from '../agent-wakeups/schema.js';
 import { createLogger } from '../logger.js';
+import { migrateLegacyOAuthCredentials } from '../credentials/oauthStore.js';
+import { ensureWorkspaceSchema } from '../workspaces/schema.js';
 
 const log = createLogger('boot-db');
 
@@ -24,8 +27,11 @@ async function probeDb() {
   await ensureAgentTaskReceiptSchema();
   await ensureJulesTaskSyncSchema();
   await ensureMultiUserSchema();
+  await migrateLegacyOAuthCredentials();
+  await ensureWorkspaceSchema(pool);
   await ensureCapabilitySchema();
   await ensureAttributeSchema();
+  await ensurePolicySchema();
   await ensureUserApiKeySchema();
   await ensureAgentWakeupSchema();
 }

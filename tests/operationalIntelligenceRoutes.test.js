@@ -8,6 +8,7 @@ const dispatchTodoItem = jest.fn();
 const loadItems = jest.fn();
 const loadArtifactCausality = jest.fn();
 const openTodoList = jest.fn();
+const createArtifact = jest.fn();
 const resolveArtifact = jest.fn();
 const updateTodoItem = jest.fn();
 
@@ -31,6 +32,7 @@ jest.unstable_mockModule('../server/operational-intelligence/todos.js', () => ({
 }));
 jest.unstable_mockModule('../server/operational-intelligence/factories.js', () => ({
   resolveArtifact,
+  createArtifact,
 }));
 
 const envSnapshot = { ...process.env };

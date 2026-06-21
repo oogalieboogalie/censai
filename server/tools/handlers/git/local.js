@@ -5,8 +5,8 @@ import {
   runGit, formatCommandResult, runNpm 
 } from './shared.js';
 
-async function resolveGitRoot(agentId, args = {}) {
-  const root = await resolveLocalProjectRoot(agentId, args.project || args.project_name || 'CensaiHub')
+async function resolveGitRoot(agentId, args = {}, context = {}) {
+  const root = await resolveLocalProjectRoot(agentId, args.project || args.project_name || 'CensaiHub', context)
     .catch(async () => process.cwd());
   const gitCheck = await runGit(root, ['rev-parse', '--show-toplevel']);
   if (!gitCheck.ok) throw new Error(`Not a git working tree: ${root}`);
@@ -19,8 +19,8 @@ async function isWorktreeDirty(cwd) {
   return status.stdout.trim().length > 0;
 }
 
-export async function localGitStatus(agentId, args) {
-  const cwd = await resolveGitRoot(agentId, args);
+export async function localGitStatus(agentId, args, context = {}) {
+  const cwd = await resolveGitRoot(agentId, args, context);
   const [branch, status, recent] = await Promise.all([
     runGit(cwd, ['branch', '--show-current']),
     runGit(cwd, ['status', '--short', '--branch']),
@@ -34,15 +34,15 @@ export async function localGitStatus(agentId, args) {
   ].join('\n\n');
 }
 
-export async function localGitFetch(agentId, args) {
-  const cwd = await resolveGitRoot(agentId, args);
+export async function localGitFetch(agentId, args, context = {}) {
+  const cwd = await resolveGitRoot(agentId, args, context);
   const remote = args.remote || 'origin';
   const result = await runGit(cwd, ['fetch', '--prune', remote], { timeout: 120000 });
   return formatCommandResult(`FETCH ${remote} in ${cwd}`, result);
 }
 
-export async function localGitPullFfOnly(agentId, args) {
-  const cwd = await resolveGitRoot(agentId, args);
+export async function localGitPullFfOnly(agentId, args, context = {}) {
+  const cwd = await resolveGitRoot(agentId, args, context);
   if (await isWorktreeDirty(cwd)) {
     return 'Refusing pull: local worktree has uncommitted changes. Run local_git_status and local_git_checkpoint first.';
   }
@@ -53,8 +53,8 @@ export async function localGitPullFfOnly(agentId, args) {
   return formatCommandResult(`PULL --FF-ONLY ${args.branch ? `${remote} ${args.branch}` : ''} in ${cwd}`, result);
 }
 
-export async function localGitCheckpoint(agentId, args) {
-  const cwd = await resolveGitRoot(agentId, args);
+export async function localGitCheckpoint(agentId, args, context = {}) {
+  const cwd = await resolveGitRoot(agentId, args, context);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const label = String(args.label || 'task-submission').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'task-submission';
   const outDir = path.join(cwd, '.team', 'checkpoints');
@@ -76,8 +76,8 @@ export async function localGitCheckpoint(agentId, args) {
   return `Checkpoint written: ${outPath}`;
 }
 
-export async function localGitVerify(agentId, args) {
-  const cwd = await resolveGitRoot(agentId, args);
+export async function localGitVerify(agentId, args, context = {}) {
+  const cwd = await resolveGitRoot(agentId, args, context);
   const steps = [];
   if (args.build !== false) {
     steps.push(formatCommandResult('NPM BUILD', await runNpm(cwd, ['run', 'build'], 120000)));

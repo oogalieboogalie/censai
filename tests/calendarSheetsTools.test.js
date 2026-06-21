@@ -91,7 +91,7 @@ describe('Google Calendar & Sheets backend integrations and tools', () => {
       const client = await getOAuthClient(undefined);
       expect(client).toBeDefined();
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('provider = $1 LIMIT 1'),
+        expect.stringContaining('provider = $1 ORDER BY updated_at DESC LIMIT 1'),
         ['google']
       );
     });

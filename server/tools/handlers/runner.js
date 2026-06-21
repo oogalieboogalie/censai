@@ -1,10 +1,10 @@
 import { truncate, readPackageJson, formatResult, runCommand, resolveLocalBin, resolveRunnerContext, resolveLinterContext } from './runnerUtils.js';
 
-export async function handleRunnerTool(agentId, name, args) {
+export async function handleRunnerTool(agentId, name, args, context = {}) {
   switch (name) {
     case 'run_tests': {
       const timeoutMs = args.timeout_ms || 30000;
-      const { cwd } = await resolveRunnerContext(agentId, args);
+      const { cwd } = await resolveRunnerContext(agentId, args, context);
       const pkgJson = await readPackageJson(cwd);
       if (!pkgJson) return 'Could not read package.json — unable to detect test runner.';
       const hasTestScript = pkgJson.scripts?.test && !pkgJson.scripts.test.includes('no test specified');
@@ -22,7 +22,7 @@ export async function handleRunnerTool(agentId, name, args) {
     }
 
     case 'run_linter': {
-      const { cwd, scopedPath: lintPath } = await resolveLinterContext(agentId, args);
+      const { cwd, scopedPath: lintPath } = await resolveLinterContext(agentId, args, context);
       const pkgJson = await readPackageJson(cwd);
       if (!pkgJson) return 'Could not read package.json — unable to detect linter.';
       const hasLintScript = pkgJson.scripts?.lint;

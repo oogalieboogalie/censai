@@ -4,6 +4,7 @@ import { systemTools } from './definitions/system.js';
 import { dispatchTools } from './definitions/dispatch.js';
 import { mailcowTools } from './definitions/mailcow.js';
 import { vexTools } from './definitions/vex.js';
+import { depTools } from './definitions/deps.js';
 import { discoveryTools } from './definitions/discovery.js';
 
 export * from './rbac/index.js';
@@ -23,4 +24,5 @@ export const TOOL_DEFINITIONS = [
   ...dispatchTools,
   ...mailcowTools,
   ...vexTools,
+  ...depTools,
 ];

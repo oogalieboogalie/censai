@@ -5,6 +5,7 @@ import { getJulesSessions, refreshSession, syncAllJulesSessions } from '../jules
 import { fetchGitHubPullRequestFiles, fetchGitHubPullRequestState, syncAgentTaskFromJulesSession } from '../jules-task-sync/index.js';
 import { getSecret } from '../secrets.js';
 import { getProject } from '../workspaces.js';
+import { readJulesQueue } from '../julesQueue.js';
 
 export const julesRouter = express.Router();
 
@@ -43,6 +44,15 @@ function present(row) {
     updatedAt: row.updated_at || null,
   };
 }
+
+julesRouter.get('/jules/queue', async (req, res) => {
+  try {
+    res.json(await readJulesQueue(process.env.JULES_QUEUE_PATH));
+  } catch (err) {
+    const status = err.code === 'ENOENT' ? 404 : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
 
 julesRouter.get('/jules/sessions', async (req, res) => {
   if (!dbReady()) return res.status(503).json({ error: 'Database unavailable' });

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pool from '../db.js';
 import { getSubAgentById } from '../memory.js';
 import { getProject, getProjectByName, getProjectByRepoOrPath, listProjects, openProject } from '../workspaces.js';
 import { getSecret } from '../secrets.js';
@@ -53,12 +54,56 @@ async function maybeOpenCurrentProject(agentId, projectName) {
 // project was opened from a GitHub repo (stored under just "repo"). Try the
 // literal name first, then fall back to matching the last `/`-segment OR the
 // `repo` field directly, before giving up.
-export async function resolveProjectForCall(agentId, projectName) {
+export async function resolveProjectForCall(agentId, projectName, context = {}) {
   const sub = await getSubAgentById(agentId);
   if (sub) {
-    if (!sub.project_id) throw new Error('This sub-agent is not bound to a project. Ask your parent agent to recreate you with a project binding.');
-    const p = await getProject(sub.project_id);
-    if (!p) throw new Error('Bound project no longer exists.');
+    let p = null;
+    if (projectName) {
+      p = await getProject(projectName);
+      if (!p) p = await getProjectByName(agentId, projectName);
+      if (!p && projectName.includes('/')) p = await getProjectByName(agentId, projectName.split('/').pop());
+      if (!p) p = await getProjectByRepoOrPath(agentId, projectName);
+    }
+
+    if (!p && context.agentTaskId) {
+      try {
+        const { rows } = await pool.query('SELECT project_id, project FROM agent_tasks WHERE id = $1', [context.agentTaskId]);
+        if (rows[0]) {
+          const taskId = rows[0].project_id;
+          const taskProjectStr = rows[0].project;
+          if (taskId) {
+            p = await getProject(taskId);
+          }
+          if (!p && taskProjectStr) {
+            p = await getProject(taskProjectStr);
+            if (!p) p = await getProjectByName(agentId, taskProjectStr);
+            if (!p && taskProjectStr.includes('/')) p = await getProjectByName(agentId, taskProjectStr.split('/').pop());
+            if (!p) p = await getProjectByRepoOrPath(agentId, taskProjectStr);
+          }
+        }
+      } catch (dbErr) {
+        console.warn(`[resolveProjectForCall] Failed to fetch task project scope for task ${context.agentTaskId}:`, dbErr.message);
+      }
+    }
+
+    if (!p && sub.project_id) {
+      p = await getProject(sub.project_id);
+    }
+
+    if (!p) {
+      const projects = await listProjects(agentId);
+      if (projects.length > 0) {
+        p = projects[0];
+      }
+    }
+
+    if (!p) {
+      p = await maybeOpenCurrentProject(agentId, projectName);
+    }
+
+    if (!p) {
+      throw new Error('This sub-agent has no project context. Please open a project first.');
+    }
     return { project: p, isSubAgent: true };
   }
   if (projectName) {
@@ -100,9 +145,9 @@ export async function resolveProjectForCall(agentId, projectName) {
   return { project: projects[0], isSubAgent: false };
 }
 
-export async function resolveLocalProjectRoot(agentId, projectName) {
+export async function resolveLocalProjectRoot(agentId, projectName, context = {}) {
   if (!projectName) return null;
-  const { project } = await resolveProjectForCall(agentId, projectName);
+  const { project } = await resolveProjectForCall(agentId, projectName, context);
   if (project?.repo) {
     throw new Error(`Project "${project.name}" is GitHub-backed. Runtime tools need a local project path.`);
   }

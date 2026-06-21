@@ -4,6 +4,10 @@ import crypto from 'crypto';
 import session from 'express-session';
 import pool from '../db.js';
 import { createLogger } from '../logger.js';
+import {
+  optionalSecret,
+  requireProductionSecret,
+} from '../secrets.js';
 import { getSessionCookieOptions } from './sessionConfig.js';
 
 const log = createLogger('http');
@@ -62,15 +66,9 @@ export function setupMiddleware(app) {
     next();
   });
 
-  const SESSION_SECRET =
-    process.env.SESSION_SECRET ||
-    (process.env.NODE_ENV === 'production'
-      ? null
-      : crypto.randomBytes(32).toString('hex'));
-
-  if (!SESSION_SECRET) {
-    throw new Error('SESSION_SECRET is required in production');
-  }
+  const SESSION_SECRET = requireProductionSecret('SESSION_SECRET')
+    || optionalSecret('SESSION_SECRET')
+    || crypto.randomBytes(32).toString('hex');
 
   const store = new PostgresStore(pool);
 

@@ -4,8 +4,9 @@ import request from 'supertest';
 const mockPool = { query: jest.fn(), connect: jest.fn() };
 const createTodoItem = jest.fn();
 const createWorkspaceEvent = jest.fn();
-const getUserState = jest.fn();
-const setUserState = jest.fn();
+const getWorkspaceState = jest.fn();
+const setWorkspaceState = jest.fn();
+const requireWorkspaceMember = jest.fn();
 
 jest.unstable_mockModule('../server/db.js', () => ({ default: mockPool }));
 jest.unstable_mockModule('../server/operational-intelligence/todos.js', () => ({
@@ -16,15 +17,18 @@ jest.unstable_mockModule('../server/operational-intelligence/factories.js', () =
 }));
 jest.unstable_mockModule('../server/state/clientStateStore.js', () => ({
   WORKSPACE_STATE_KEY: 'homebase.workspace.v1',
-  getUserState,
-  setUserState,
+  getWorkspaceState,
+  setWorkspaceState,
+}));
+jest.unstable_mockModule('../server/workspaces/context.js', () => ({
+  requireWorkspaceMember,
 }));
 
 const envSnapshot = { ...process.env };
 const { default: express } = await import('express');
 const { commandsRouter } = await import('../server/routes/commands.js');
 
-function createApp(session = { userId: 7 }) {
+function createApp(session = { userId: 7, userRole: 'user' }) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
@@ -60,7 +64,7 @@ describe('commands routes', () => {
   });
 
   test('executes workspace state reads with request-derived context and audit emission', async () => {
-    getUserState.mockResolvedValue({
+    getWorkspaceState.mockResolvedValue({
       found: true,
       source: 'database',
       value: { wins: [{ id: 'w-1' }] },
@@ -72,9 +76,9 @@ describe('commands routes', () => {
       .send({ workspaceId: 'workspace-1' });
 
     expect(response.status).toBe(200);
-    expect(getUserState).toHaveBeenCalledWith({
+    expect(getWorkspaceState).toHaveBeenCalledWith({
       db: mockPool,
-      userId: '7',
+      workspaceId: 'workspace-1',
       key: 'homebase.workspace.v1',
     });
     expect(createWorkspaceEvent).toHaveBeenCalledWith({ db: mockPool }, expect.objectContaining({
@@ -84,6 +88,7 @@ describe('commands routes', () => {
     }));
     expect(response.body.context).toEqual({
       userId: '7',
+      userRole: 'user',
       workspaceId: 'workspace-1',
       actor: { kind: 'user', id: '7' },
       runtimeMode: 'private_server',
@@ -91,7 +96,7 @@ describe('commands routes', () => {
     expect(response.body.result).toEqual({
       key: 'homebase.workspace.v1',
       workspaceId: 'workspace-1',
-      storageScope: 'user',
+      storageScope: 'workspace',
       found: true,
       value: { wins: [{ id: 'w-1' }] },
     });
@@ -126,7 +131,7 @@ describe('commands routes', () => {
   });
 
   test('returns blocked import patterns from validate command without writing files', async () => {
-    const response = await request(createApp())
+    const response = await request(createApp({ userId: 7, userRole: 'admin' }))
       .post('/api/commands/window.import.validate/execute')
       .send({
         workspaceId: 'workspace-1',
@@ -143,6 +148,35 @@ describe('commands routes', () => {
     ]);
   });
 
+  test('denies missing command capabilities before the handler and records command.failed', async () => {
+    createWorkspaceEvent.mockResolvedValue({ id: 'event-denied' });
+
+    const response = await request(createApp())
+      .post('/api/commands/window.import.validate/execute')
+      .send({
+        workspaceId: 'workspace-1',
+        label: 'Safe Window',
+        rawJsx: 'export function SafeWindow() { return <div>Safe</div>; }',
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(expect.objectContaining({
+      ok: false,
+      code: 'CAPABILITY_DENIED',
+      error: 'Missing required capability: window.import',
+      auditEventId: 'event-denied',
+    }));
+    expect(createWorkspaceEvent).toHaveBeenCalledWith({ db: mockPool }, expect.objectContaining({
+      workspaceId: 'workspace-1',
+      type: 'command.failed',
+      actor: { kind: 'user', id: '7' },
+      payload: expect.objectContaining({
+        commandId: 'window.import.validate',
+        requiredCapabilities: ['window.import'],
+      }),
+    }));
+  });
+
   test('fails command execution when workspace context is missing and records a failed audit when possible', async () => {
     createWorkspaceEvent.mockResolvedValue({ id: 'event-3' });
 
@@ -151,7 +185,7 @@ describe('commands routes', () => {
       .send({ value: { wins: [] } });
 
     expect(response.status).toBe(400);
-    expect(setUserState).not.toHaveBeenCalled();
+    expect(setWorkspaceState).not.toHaveBeenCalled();
     expect(response.body.error).toBe('workspaceId is required');
     expect(response.body.auditEventId).toBeNull();
   });

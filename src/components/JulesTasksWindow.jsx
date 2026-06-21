@@ -2,6 +2,8 @@ import React from 'react';
 import { Icon } from './Icons.jsx';
 import { WindowTitle } from './Windows.jsx';
 import { api } from '../lib/api.js';
+import { useVisibilityAwareInterval } from '../lib/usePolling.js';
+import { JulesQueuePanel } from './jules/JulesQueuePanel.jsx';
 
 function fmtDate(value) {
   if (!value) return 'not checked';
@@ -17,30 +19,45 @@ function statusColor(status) {
   return 'var(--ps-blue)';
 }
 
-export function JulesTasksWindow({ win }) {
+export function JulesTasksWindow({ win, isActive }) {
   const [sessions, setSessions] = React.useState([]);
+  const [queue, setQueue] = React.useState(null);
   const [includeCompleted, setIncludeCompleted] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [lastLoadedAt, setLastLoadedAt] = React.useState(null);
 
-  const load = React.useCallback(async ({ refresh = false } = {}) => {
-    setLoading(true);
+  const load = React.useCallback(async ({ refresh = false, quiet = false } = {}) => {
+    if (!quiet) setLoading(true);
     setError('');
-    try {
-      const data = await api.getJulesSessions({ refresh, includeCompleted });
-      setSessions(data.sessions || []);
-      setLastLoadedAt(new Date());
-    } catch (err) {
-      setError(err.message || 'Failed to load Jules sessions');
-    } finally {
-      setLoading(false);
+    const [sessionResult, queueResult] = await Promise.allSettled([
+      api.getJulesSessions({ refresh, includeCompleted }),
+      api.getJulesQueue(),
+    ]);
+    if (sessionResult.status === 'fulfilled') {
+      setSessions(sessionResult.value.sessions || []);
     }
+    if (queueResult.status === 'fulfilled') {
+      setQueue(queueResult.value);
+    }
+    const errors = [
+      sessionResult.status === 'rejected' ? sessionResult.reason?.message : null,
+      queueResult.status === 'rejected' ? queueResult.reason?.message : null,
+    ].filter(Boolean);
+    if (sessionResult.status === 'fulfilled' || queueResult.status === 'fulfilled') {
+      setLastLoadedAt(new Date());
+    }
+    setError(errors.join(' · '));
+    setLoading(false);
   }, [includeCompleted]);
 
   React.useEffect(() => {
     load({ refresh: false });
   }, [load]);
+
+  useVisibilityAwareInterval(() => {
+    load({ quiet: true });
+  }, 3000, { inactive: isActive === false });
 
   React.useEffect(() => {
     const handleTasksUpdated = () => {
@@ -57,7 +74,7 @@ export function JulesTasksWindow({ win }) {
       <WindowTitle
         icon={<Icon.Bot size={14} />}
         label={win.title || 'Jules Tasks'}
-        subtitle="manual refresh"
+        subtitle="live repository queue"
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: 12, gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -83,9 +100,10 @@ export function JulesTasksWindow({ win }) {
         {error && <div style={{ color: 'var(--ps-red)', fontSize: 12 }}>{error}</div>}
 
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'grid', alignContent: 'start', gap: 8 }}>
-          {!loading && sessions.length === 0 && (
+          <JulesQueuePanel queue={queue} includeCompleted={includeCompleted} />
+          {!loading && sessions.length === 0 && !queue && (
             <div style={{ border: '1px dashed var(--hairline)', borderRadius: 8, padding: 18, color: 'var(--ink-faint)', fontSize: 12, textAlign: 'center' }}>
-              No active Jules tasks.
+              No Jules queue or session data.
             </div>
           )}
           {sessions.map(session => (
@@ -113,4 +131,3 @@ export function JulesTasksWindow({ win }) {
     </>
   );
 }
-

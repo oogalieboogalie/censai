@@ -120,6 +120,7 @@ export const MEDIA_WINDOW_MANIFESTS = [
     componentName: 'FigmaWindow',
     componentPath: 'src/components/FigmaWindow.jsx',
     defaultSize: { w: 800, h: 560 },
+    moduleMenu: { show: false, status: 'coming-soon' },
     launcher: { show: true, order: 220, icon: 'Edit', label: 'Figma', hint: 'embedded design file' },
   },
 ];

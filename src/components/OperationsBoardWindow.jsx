@@ -31,7 +31,10 @@ async function readJson(url, fallback) {
   }
 }
 
+import { useWorkspaceStore } from '../lib/store.js';
+
 export function OperationsBoardWindow({ win, onUpdate, isActive }) {
+  const spawnAt = useWorkspaceStore(state => state.spawnAt);
   const [state, setState] = React.useState({
     health: null,
     schedules: [],
@@ -115,12 +118,20 @@ export function OperationsBoardWindow({ win, onUpdate, isActive }) {
       >
         <button
           type="button"
+          title="View Agent Traces"
+          onClick={() => spawnAt('agent_trace', { title: 'Agentic Tracing' })}
+          style={iconButtonStyle(false)}
+        >
+          <Icon.Search size={13} />
+        </button>
+        <button
+          type="button"
           title="Refresh operations board"
           onClick={() => load({ refreshJules: true })}
           disabled={refreshing}
           style={iconButtonStyle(refreshing)}
         >
-          <Icon.Search size={13} />
+          <Icon.Refresh size={13} />
         </button>
       </WindowTitle>
 

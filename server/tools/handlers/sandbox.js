@@ -22,19 +22,19 @@ function formatResult(label, code, stdout, stderr) {
 }
 
 // Resolve which host directory backs the sandbox for this call.
-async function resolveHostPath(agentId, args = {}) {
+async function resolveHostPath(agentId, args = {}, context = {}) {
   const projectPath = args.project_path || args.projectPath;
   if (projectPath) return projectPath;
 
   const projectName = args.project || args.project_name || args.projectName;
   if (projectName) {
-    const root = await resolveLocalProjectRoot(agentId, projectName);
+    const root = await resolveLocalProjectRoot(agentId, projectName, context);
     if (root) return root;
   }
   return PROJECT_ROOT;
 }
 
-export async function handleSandboxTool(agentId, name, args) {
+export async function handleSandboxTool(agentId, name, args, context = {}) {
   switch (name) {
     case 'sandbox_exec': {
       const command = (args.command || '').trim();
@@ -46,7 +46,7 @@ export async function handleSandboxTool(agentId, name, args) {
 
       let hostPath;
       try {
-        hostPath = await resolveHostPath(agentId, args);
+        hostPath = await resolveHostPath(agentId, args, context);
       } catch (err) {
         return `sandbox_exec could not resolve a project directory: ${err.message}`;
       }

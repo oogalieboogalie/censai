@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
 CREATE INDEX IF NOT EXISTS idx_artifacts_workspace_type ON artifacts (workspace_id, artifact_type, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_artifacts_owner ON artifacts (owner_kind, owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_artifacts_visibility ON artifacts (workspace_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_artifacts_data_gin ON artifacts USING GIN (data);
 CREATE INDEX IF NOT EXISTS idx_artifacts_metadata_gin ON artifacts USING GIN (metadata);
 CREATE INDEX IF NOT EXISTS idx_artifacts_source_ref_gin ON artifacts USING GIN (source_ref);
 CREATE TABLE IF NOT EXISTS workspace_events (

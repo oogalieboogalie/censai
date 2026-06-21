@@ -37,6 +37,9 @@ jest.unstable_mockModule('../server/secrets.js', () => ({
   initSecrets: jest.fn(async () => {}),
   getSecret: jest.fn(() => ''),
 }));
+jest.unstable_mockModule('../server/credentials/oauthStore.js', () => ({
+  migrateLegacyOAuthCredentials: jest.fn(async () => 0),
+}));
 
 const noop = () => {};
 jest.unstable_mockModule('../server/logger.js', () => ({

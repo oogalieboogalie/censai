@@ -1,4 +1,5 @@
 import { getSubAgentById } from '../../memory.js';
+import { recordProvenance } from '../../operational-intelligence/provenance.js';
 import {
   openProject,
   listProjects,
@@ -16,7 +17,7 @@ import {
 } from '../../workspaces.js';
 import { resolveProjectForCall } from '../helpers.js';
 
-export async function handleProjectsTool(agentId, name, args) {
+export async function handleProjectsTool(agentId, name, args, context = {}) {
   switch (name) {
     case 'open_project': {
       const project = await openProject(agentId, {
@@ -42,19 +43,19 @@ export async function handleProjectsTool(agentId, name, args) {
       ).join('\n');
     }
     case 'read_brief': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const brief = await readProjectBrief(project);
       if (!brief) return `No brief for "${project.name}" yet. Use refresh_brief to generate one.`;
       return brief;
     }
     case 'refresh_brief': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       await refreshProjectBrief(project);
       await logProjectActivity(project.id, agentId, 'refresh_brief', null);
       return `Brief refreshed for "${project.name}".`;
     }
     case 'project_read': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const sub = await getSubAgentById(agentId);
       const branch = sub?.github_branch || undefined;
       const content = await projectRead(project, args.path, {
@@ -65,7 +66,7 @@ export async function handleProjectsTool(agentId, name, args) {
       return content;
     }
     case 'project_file_outline': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const sub = await getSubAgentById(agentId);
       const branch = sub?.github_branch || undefined;
       return await projectFileOutline(project, args.path, {
@@ -81,10 +82,23 @@ export async function handleProjectsTool(agentId, name, args) {
       if (sub && sub.permission === 'researcher') {
         return 'Error: researcher sub-agents cannot write project files. Use the `report` tool to share findings.';
       }
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const branch = sub?.github_branch || undefined;
       const msg = `Update ${args.path} (by ${agentId})`;
       const where = await projectWrite(project, args.path, args.content, { branch, message: msg });
+
+      if (args.__provenance) {
+        await recordProvenance({
+          workspace_id: project.name,
+          agent_id: args.__provenance.agent_id,
+          prompt: args.__provenance.prompt,
+          model: args.__provenance.model,
+          code_snippet: args.content,
+          file_path: args.path,
+          metadata: { project_id: project.id, branch }
+        }).catch(err => console.error('[Provenance] Failed to record:', err.message));
+      }
+
       await logProjectActivity(project.id, agentId, 'write', args.path);
       const onBranch = branch ? ` on \`${branch}\`` : '';
       return `Wrote ${args.path} in ${project.name}${onBranch}. → ${where}`;
@@ -94,7 +108,7 @@ export async function handleProjectsTool(agentId, name, args) {
       if (sub && (sub.permission === 'reviewer' || sub.permission === 'researcher')) {
         return `Error: ${sub.permission} sub-agents cannot edit project files. Use the \`report\` tool instead.`;
       }
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const branch = sub?.github_branch || undefined;
       const msg = `Edit ${args.path} (by ${agentId})`;
       const where = await projectEdit(project, args.path, args.old_string, args.new_string, { branch, message: msg });
@@ -110,7 +124,7 @@ export async function handleProjectsTool(agentId, name, args) {
       if (!args.edits || !Array.isArray(args.edits) || args.edits.length === 0) {
         return 'Error: project_multi_edit requires an edits array with at least one entry.';
       }
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const branch = sub?.github_branch || undefined;
       const results = [];
       const errors = [];
@@ -141,7 +155,7 @@ export async function handleProjectsTool(agentId, name, args) {
       return summary;
     }
     case 'project_list': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const sub = await getSubAgentById(agentId);
       const branch = sub?.github_branch || undefined;
       const entries = await projectList(project, args.path || '.', { branch });
@@ -149,7 +163,7 @@ export async function handleProjectsTool(agentId, name, args) {
       return entries.map(e => `[${e.type === 'dir' ? 'DIR' : 'FILE'}] ${e.name}`).join('\n');
     }
     case 'report': {
-      const { project } = await resolveProjectForCall(agentId, args.project);
+      const { project } = await resolveProjectForCall(agentId, args.project, context);
       const filePath = await writeReport(project, agentId, { title: args.title, content: args.content });
       return `Report filed: ${filePath}`;
     }
@@ -158,7 +172,7 @@ export async function handleProjectsTool(agentId, name, args) {
       if (!sub) return 'Only sub-agents can submit PRs.';
       if (sub.permission !== 'worker') return `Error: ${sub.permission} sub-agents cannot submit PRs — only workers.`;
       if (!sub.github_branch) return 'Error: you have no branch assigned. Was this project actually a GitHub project?';
-      const { project } = await resolveProjectForCall(agentId, null);
+      const { project } = await resolveProjectForCall(agentId, null, context);
       if (!isGithubProject(project)) return 'Error: this project is not GitHub-backed.';
       const pr = await openSubAgentPR(project, sub, { title: args.title, body: args.body });
       await logProjectActivity(project.id, agentId, 'pr', `${args.title} (#${pr.number})`);

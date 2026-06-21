@@ -68,6 +68,7 @@ async function patchTodo(db, input, patch) {
 export async function dispatchTodoItem(db, input = {}) {
   await ensureOperationalIntelligenceSchema(db);
   const actor = input.actor || defaultActor;
+  input = { ...input, actor };
   const todo = await loadTodo(db, input);
   if (!todo) throw new Error('Task artifact not found');
   const data = todo.data || {};

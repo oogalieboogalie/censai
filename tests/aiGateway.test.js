@@ -154,6 +154,40 @@ describe('AI Gateway chat completion request', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  test('uses Cohere strict tools without silently removing definitions', async () => {
+    const tools = Array.from({ length: 50 }, (_, index) => ({
+      type: 'function',
+      function: {
+        name: `tool_${index}`,
+        parameters: {
+          type: 'object',
+          properties: Object.fromEntries(
+            Array.from({ length: 5 }, (__, field) => [`field_${field}`, { type: 'string' }])
+          ),
+        },
+      },
+    }));
+    global.fetch = jest.fn(async (url, options) => {
+      const payload = JSON.parse(options.body);
+      expect(payload.strict_tools).toBe(true);
+      expect(payload.tools.length).toBe(50);
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: 'strict' } }] }),
+      };
+    });
+
+    await requestChatCompletion({
+      config: {
+        provider: 'cohere',
+        model: 'north-mini-code-1-0',
+        baseUrl: 'https://api.cohere.ai/compatibility/v1',
+        apiKey: 'cohere-key',
+      },
+      body: { messages: [], tools },
+    });
+  });
+
   test('retries transient HTTP failures before returning JSON', async () => {
     const sleep = jest.fn(async () => {});
     global.fetch = jest.fn()

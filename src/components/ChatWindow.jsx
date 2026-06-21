@@ -4,8 +4,9 @@ import { useChat } from './chat/useChat.js';
 import { ChatBubble } from './chat/ChatBubble.jsx';
 import { ChatStatus } from './chat/ChatStatus.jsx';
 import { ChatInput } from './chat/ChatInput.jsx';
+import { RelatedContext } from './doc/RelatedContext.jsx';
 
-export function ChatWindow({ win, onUpdate, allWins, canvasGroups, currentProject, isActive }) {
+export function ChatWindow({ win, onUpdate, allWins, canvasGroups, currentProject, isActive, workspaceId }) {
   const {
     agent,
     msgs,
@@ -46,6 +47,7 @@ export function ChatWindow({ win, onUpdate, allWins, canvasGroups, currentProjec
           />
         ))}
         {sending && <ChatStatus liveStatus={liveStatus} agent={agent} activityLog={activityLog} />}
+        <RelatedContext workspaceId={workspaceId} query={msgs[msgs.length - 1]?.content || ''} />
       </div>
       <ChatInput
         draft={draft}

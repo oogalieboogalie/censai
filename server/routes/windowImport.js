@@ -3,7 +3,7 @@
  *
  * POST /api/windows/import
  *   Accepts raw JSX + CSS (e.g. from AI Studio), adapts it via LLM to
- *   match CensaiHub window conventions, writes the folder, and runs
+ *   match Censai window conventions, writes the folder, and runs
  *   window:sync so it appears on the canvas immediately.
  *
  * POST /api/windows/sync
@@ -18,6 +18,11 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '../logger.js';
 import { callModel } from '../aiGateway/callModel.js';
+import {
+  slugifyWindowKind,
+  validateGeneratedWindow,
+  windowComponentName,
+} from '../window-import/validation.js';
 
 const execFileAsync = promisify(execFile);
 const log = createLogger('window-import');
@@ -28,19 +33,6 @@ const WINDOWS_DIR = path.join(PROJECT_ROOT, 'src', 'components', 'windows');
 export const windowImportRouter = express.Router();
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function slugify(str) {
-  return str
-    .trim()
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .replace(/\s+(.)/g, (_, c) => c.toUpperCase())
-    .replace(/^./, c => c.toLowerCase());
-}
-
-function pascalCase(str) {
-  const s = slugify(str);
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 async function runSync() {
   try {
@@ -58,9 +50,9 @@ async function runSync() {
 // ── The CensaiHub window conventions prompt ────────────────────────────────
 
 function buildAdaptPrompt(rawJsx, rawCss, hint) {
-  return `You are a code transformer. Take raw React code (possibly exported from AI Studio or another tool) and adapt it to fit CensaiHub's window component conventions EXACTLY.
+  return `You are a code transformer. Take raw React code (possibly exported from AI Studio or another tool) and adapt it to fit Censai's window component conventions EXACTLY.
 
-CENSAIHUB WINDOW CONVENTIONS:
+CENSAI WINDOW CONVENTIONS:
 1. File is named <Name>Window.jsx — component must be: export function <Name>Window() {}
 2. Also add: export default <Name>Window; at the bottom
 3. CSS goes in a companion file imported as: import './<Name>Window.css';
@@ -110,6 +102,7 @@ Respond with EXACTLY this JSON structure (no markdown, raw JSON only):
  */
 windowImportRouter.post('/windows/import', async (req, res) => {
   const { rawJsx, rawCss = '', hint = '', launcher } = req.body;
+  const dryRun = req.body?.dry_run === true || req.body?.dryRun === true;
 
   if (!rawJsx || rawJsx.trim().length < 20) {
     return res.status(400).json({ error: 'rawJsx is required and must contain actual code.' });
@@ -143,7 +136,7 @@ windowImportRouter.post('/windows/import', async (req, res) => {
       });
     }
 
-    const kind  = slugify(adapted.kind  || 'importedWindow');
+    const kind  = slugifyWindowKind(adapted.kind || 'importedWindow');
     const label = adapted.label || kind;
     const size  = adapted.defaultSize || { w: 520, h: 480 };
     const jsx   = adapted.jsx || '';
@@ -153,19 +146,40 @@ windowImportRouter.post('/windows/import', async (req, res) => {
       return res.status(502).json({ error: 'LLM returned empty JSX. Try again.' });
     }
 
-    // ── Step 2: Write files ────────────────────────────────────────────────
-    const windowDir = path.join(WINDOWS_DIR, kind);
-    fs.mkdirSync(windowDir, { recursive: true });
-
-    const componentName = `${pascalCase(kind)}Window`;
+    const componentName = windowComponentName(kind);
     const cssFile = `${componentName}.css`;
-
-    // Ensure the JSX imports the right CSS file name
     const finalJsx = jsx.replace(
       /import\s+['"][^'"]*\.css['"]/,
       `import './${cssFile}'`
     );
+    const validation = validateGeneratedWindow({
+      kind,
+      label,
+      rawJsx: finalJsx,
+      rawCss: css,
+    });
+    if (!validation.ok) {
+      return res.status(422).json({
+        error: 'Generated window contains blocked code patterns.',
+        ...validation,
+      });
+    }
 
+    if (dryRun) {
+      return res.json({
+        ok: true,
+        dryRun: true,
+        kind,
+        label,
+        componentName,
+        defaultSize: size,
+        validation,
+      });
+    }
+
+    // ── Step 2: Write files ────────────────────────────────────────────────
+    const windowDir = path.join(WINDOWS_DIR, kind);
+    fs.mkdirSync(windowDir, { recursive: true });
     fs.writeFileSync(path.join(windowDir, 'index.jsx'), finalJsx, 'utf8');
     if (css) {
       fs.writeFileSync(path.join(windowDir, cssFile), css, 'utf8');
@@ -225,7 +239,7 @@ windowImportRouter.get('/windows/list-importable', (_req, res) => {
     if (!fs.existsSync(WINDOWS_DIR)) return res.json({ windows: [] });
     const dirs = fs.readdirSync(WINDOWS_DIR, { withFileTypes: true })
       .filter(d => d.isDirectory() && fs.existsSync(path.join(WINDOWS_DIR, d.name, 'meta.js')))
-      .map(d => ({ kind: d.name, hasCss: fs.existsSync(path.join(WINDOWS_DIR, d.name, `${pascalCase(d.name)}Window.css`)) }));
+      .map(d => ({ kind: d.name, hasCss: fs.existsSync(path.join(WINDOWS_DIR, d.name, `${windowComponentName(d.name)}.css`)) }));
     res.json({ windows: dirs });
   } catch (err) {
     res.status(500).json({ error: err.message });

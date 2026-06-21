@@ -3,6 +3,7 @@ import { google } from 'googleapis';
 import crypto from 'crypto';
 import pool from '../db.js';
 import { getClientAccessPolicy } from '../security/byokPolicy.js';
+import { saveOAuthCredential } from '../credentials/oauthStore.js';
 
 export const authRouter = express.Router();
 
@@ -92,16 +93,13 @@ authRouter.get('/google/callback', async (req, res) => {
       user = userRes.rows[0];
     }
 
-    // Store tokens in user_tokens table
-    await pool.query(
-      `INSERT INTO user_tokens (user_id, provider, access_token, refresh_token, expiry_date, scope)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (user_id, provider) DO UPDATE
-       SET access_token = $3, refresh_token = COALESCE($4, user_tokens.refresh_token), expiry_date = $5, scope = $6, updated_at = NOW()`,
-      [user.id, 'google', tokens.access_token, tokens.refresh_token || null, tokens.expiry_date || null, tokens.scope || null]
-    );
+    await saveOAuthCredential({
+      db: pool,
+      userId: user.id,
+      provider: 'google',
+      tokens,
+    });
 
-    req.session.googleTokens = tokens;
     req.session.userId = user.id;
     req.session.userRole = user.role;
     req.session.save((err) => {

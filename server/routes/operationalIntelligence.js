@@ -7,7 +7,7 @@ import { createHandoff, loadArtifactCausality } from '../operational-intelligenc
 import { safeFastForwardCurrentProject, syncPulledTodoArtifacts } from '../operational-intelligence/localPull.js';
 import { dispatchTodoItem } from '../operational-intelligence/todoDispatch.js';
 import { createTodoItem, loadItems, openTodoList, updateTodoItem } from '../operational-intelligence/todos.js';
-import { resolveArtifact } from '../operational-intelligence/factories.js';
+import { resolveArtifact, createArtifact } from '../operational-intelligence/factories.js';
 
 export const operationalIntelligenceRouter = express.Router();
 
@@ -23,6 +23,73 @@ operationalIntelligenceRouter.get('/todos/:listId', async (req, res) => {
     res.json(toTodoPayload({ list, items }));
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+operationalIntelligenceRouter.get('/events', async (req, res) => {
+  try {
+    const { type, limit = 50 } = req.query;
+    let query = 'SELECT * FROM workspace_events';
+    const params = [];
+    if (type) {
+      query += ' WHERE event_type = $1';
+      params.push(type);
+    }
+    query += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1);
+    params.push(limit);
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * Telemetry endpoint for runtime provenance validation.
+ * Used by the Python SDK reference implementation.
+ */
+operationalIntelligenceRouter.post('/telemetry/provenance', async (req, res) => {
+  try {
+    const { workspace_id, event_type, ...payload } = req.body;
+
+    // We record this as a workspace event, potentially linking to an
+    // ai_provenance artifact if the file_path matches.
+    const artifactQuery = `
+      SELECT id FROM artifacts
+      WHERE workspace_id = $1
+        AND artifact_type = 'ai_provenance'
+        AND data->>'file_path' = $2
+      ORDER BY created_at DESC LIMIT 1
+    `;
+    const artRes = await pool.query(artifactQuery, [workspace_id, payload.file_path]);
+    const artifactId = artRes.rows[0]?.id || null;
+
+    const eventQuery = `
+      INSERT INTO workspace_events (
+        workspace_id,
+        event_type,
+        actor_kind,
+        actor_id,
+        artifact_id,
+        payload
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+    `;
+
+    const eventRes = await pool.query(eventQuery, [
+      workspace_id,
+      event_type || 'runtime_validation',
+      'system',
+      'python_sdk',
+      artifactId,
+      payload
+    ]);
+
+    res.status(201).json({ id: eventRes.rows[0].id, linkedArtifact: artifactId });
+  } catch (err) {
+    // We don't want telemetry failures to crash anything, but we log for dev
+    console.error('[Telemetry] Provenance error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -85,6 +152,67 @@ operationalIntelligenceRouter.post('/todos/:listId/items/:itemId/dispatch', asyn
       itemArtifactId: req.params.itemId,
     });
     res.json({ ...toTodoPayload(result), dispatch: result.dispatch });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+operationalIntelligenceRouter.get('/traces', async (req, res) => {
+  try {
+    const { workspaceId = 'default', limit = 50 } = req.query;
+    const { rows } = await pool.query(
+      `SELECT * FROM artifacts
+       WHERE workspace_id = $1 AND artifact_type = 'agent_session_trace'
+       ORDER BY created_at DESC LIMIT $2`,
+      [workspaceId, limit]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+operationalIntelligenceRouter.get('/traces/:id/events', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM workspace_events
+       WHERE artifact_id = $1
+       ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+operationalIntelligenceRouter.post('/traces/:id/convert-to-test', async (req, res) => {
+  try {
+    const trace = await resolveArtifact({ db: pool }, { artifactId: req.params.id });
+    if (!trace) return res.status(404).json({ error: 'Trace not found' });
+
+    const { rows: events } = await pool.query(
+      `SELECT * FROM workspace_events WHERE artifact_id = $1 ORDER BY created_at ASC`,
+      [trace.id]
+    );
+
+    const testCase = await createArtifact({ db: pool }, {
+      workspaceId: trace.workspace_id,
+      type: 'regression_test_case',
+      title: `Regression Test: ${trace.title}`,
+      owner: { kind: 'system', id: 'observability' },
+      data: {
+        traceId: trace.id,
+        initialContext: trace.data.initialContext,
+        events: events.map(e => ({ type: e.event_type, payload: e.payload })),
+        finalText: trace.data.finalTextPreview,
+      },
+      metadata: {
+        convertedFrom: trace.id,
+      },
+    });
+
+    res.json(testCase);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

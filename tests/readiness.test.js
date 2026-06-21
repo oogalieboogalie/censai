@@ -15,6 +15,8 @@ jest.unstable_mockModule('../server/secrets.js', () => ({
     if (key === 'AI_API_KEY') return 'test-key';
     return null;
   }),
+  optionalSecret: jest.fn((_key, fallback = null) => fallback),
+  requireProductionSecret: jest.fn(() => null),
 }));
 
 const { app } = await import('../server.js');

@@ -1,5 +1,6 @@
 import path from 'path';
 import { getSecret } from '../../secrets.js';
+import { recordProvenance } from '../../operational-intelligence/provenance.js';
 import { runnerClient } from '../../runner/client.js';
 
 export async function handleLocalTool(agentId, name, args) {
@@ -31,6 +32,19 @@ export async function handleLocalTool(agentId, name, args) {
       try {
         const abs = path.resolve(args.file_path);
         await runnerClient.fsWrite(abs, args.content);
+
+        if (args.__provenance) {
+          await recordProvenance({
+            workspace_id: 'local',
+            agent_id: args.__provenance.agent_id,
+            prompt: args.__provenance.prompt,
+            model: args.__provenance.model,
+            code_snippet: args.content,
+            file_path: args.file_path,
+            metadata: { abs_path: abs }
+          }).catch(err => console.error('[Provenance] Failed to record:', err.message));
+        }
+
         return `Successfully wrote to ${abs}`;
       } catch (err) {
         return `Failed to write file: ${err.message}`;

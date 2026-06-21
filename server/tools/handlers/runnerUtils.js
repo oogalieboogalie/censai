@@ -48,31 +48,31 @@ export async function pathExists(targetPath) {
   return fs.promises.access(targetPath).then(() => true).catch(() => false);
 }
 
-export async function resolveRunnerContext(agentId, args = {}) {
+export async function resolveRunnerContext(agentId, args = {}, taskContext = {}) {
   const projectPath = args.project_path || args.projectPath;
   if (projectPath) {
     const resolved = path.resolve(projectPath);
     if (await pathExists(path.join(resolved, 'package.json'))) return { cwd: resolved, scopedPath: args.path || '.' };
-    const root = await resolveLocalProjectRoot(agentId, projectPath);
+    const root = await resolveLocalProjectRoot(agentId, projectPath, taskContext);
     return { cwd: root, scopedPath: args.path || '.' };
   }
   const projectName = args.project || args.project_name || args.projectName;
   if (projectName) {
-    const root = await resolveLocalProjectRoot(agentId, projectName);
+    const root = await resolveLocalProjectRoot(agentId, projectName, taskContext);
     return { cwd: root, scopedPath: args.path || '.' };
   }
   return { cwd: PROJECT_ROOT, scopedPath: args.path || '.' };
 }
 
-export async function resolveLinterContext(agentId, args = {}) {
-  const context = await resolveRunnerContext(agentId, args);
+export async function resolveLinterContext(agentId, args = {}, taskContext = {}) {
+  const context = await resolveRunnerContext(agentId, args, taskContext);
   const scopedPath = context.scopedPath || '.';
   if (scopedPath === '.') return context;
   const candidate = path.isAbsolute(scopedPath) ? scopedPath : path.resolve(context.cwd, scopedPath);
   if (await pathExists(candidate)) return context;
   // Agents often pass the project name in `path`. Treat a non-existent lint
   // path as a project lookup before handing it to eslint as a bad file path.
-  const root = await resolveLocalProjectRoot(agentId, scopedPath).catch(() => null);
+  const root = await resolveLocalProjectRoot(agentId, scopedPath, taskContext).catch(() => null);
   if (root) return { cwd: root, scopedPath: '.' };
   return context;
 }

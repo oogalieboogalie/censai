@@ -12,13 +12,19 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS user_tokens (
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   provider VARCHAR(50) DEFAULT 'google',
-  access_token TEXT NOT NULL,
+  access_token TEXT,
   refresh_token TEXT,
+  encrypted_access_token TEXT,
+  encrypted_refresh_token TEXT,
   expiry_date BIGINT,
   scope TEXT,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, provider)
 );
+
+ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS encrypted_access_token TEXT;
+ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS encrypted_refresh_token TEXT;
+ALTER TABLE user_tokens ALTER COLUMN access_token DROP NOT NULL;
 
 -- Create user_client_state table
 CREATE TABLE IF NOT EXISTS user_client_state (

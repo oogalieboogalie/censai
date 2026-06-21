@@ -8,3 +8,4 @@ export {
 } from './core.js';
 export { TERMINAL_TASK_STATUSES, ACTIVE_JULES_STATUSES } from './constants.js';
 export { buildJulesCompletionReceipt } from './receipt.js';
+export { decideJulesSteward } from './decision.js';

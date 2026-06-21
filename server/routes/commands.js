@@ -45,10 +45,11 @@ commandsRouter.post('/commands/:commandId/execute', async (req, res) => {
       output: null,
       error,
     });
-    res.status(400).json({
+    res.status(error.statusCode || 400).json({
       ok: false,
       commandId: req.params.commandId,
       context,
+      code: error.code || 'COMMAND_FAILED',
       error: error.message,
       auditEventId: audit?.id || null,
     });

@@ -8,8 +8,9 @@ import { AnnotationCard } from './doc/AnnotationCard.jsx';
 import { SelectionBar, AnnotationComposer } from './doc/AnnotationUI.jsx';
 import { NoteGraph } from './doc/NoteGraph.jsx';
 import { useDoc } from './doc/useDoc.js';
+import { RelatedContext } from './doc/RelatedContext.jsx';
 
-export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign }) {
+export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign, workspaceId }) {
   const bodyRef = React.useRef(null);
   const {
     realContent, setRealContent,
@@ -155,6 +156,7 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign }) 
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 6px 4px' }}>Annotations</div>
             {annotations.length === 0 && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-faint)', padding: 6 }}>highlight text<br/>to add a note</div>}
             {annotations.map(a => <AnnotationCard key={a.id} ann={a} isActive={activeAnnId === a.id} onClick={() => setActiveAnnId(a.id)} onRemove={() => onUpdate({ annotations: annotations.filter(x => x.id !== a.id) })} />)}
+            <RelatedContext workspaceId={workspaceId} query={win.fileName} />
           </div>
         )}
       </div>

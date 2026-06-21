@@ -1,3 +1,5 @@
+import { getConfiguredRuntimeMode } from '../config/productIdentity.js';
+
 export const RUNTIME_MODES = Object.freeze({
   LOCAL_DESKTOP: 'local_desktop',
   PRIVATE_SERVER: 'private_server',
@@ -5,7 +7,7 @@ export const RUNTIME_MODES = Object.freeze({
 });
 
 export function getRuntimeMode() {
-  return process.env.HOMEBASE_MODE || (
+  return getConfiguredRuntimeMode() || (
     process.env.NODE_ENV === 'production' ? RUNTIME_MODES.CLOUD_SAAS : RUNTIME_MODES.LOCAL_DESKTOP
   );
 }

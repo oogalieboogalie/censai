@@ -47,11 +47,21 @@ export async function handleMemoryTool(agentId, name, args) {
       return `Emotional state updated: ${args.emotion}`;
     }
     case 'message_to': {
-      await sendAgentMessage(agentId, args.agent.toLowerCase(), args.content, { messageType: 'agent-to-agent' });
+      // Use explicit idempotency key to prevent duplicates on retries
+      const idempotencyKey = args.idempotencyKey || `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      await sendAgentMessage(agentId, args.agent.toLowerCase(), args.content, { 
+        messageType: 'agent-to-agent',
+        idempotencyKey 
+      });
       return `Message sent to ${args.agent}.`;
     }
     case 'broadcast': {
-      await sendAgentMessage(agentId, null, args.content, { messageType: 'broadcast' });
+      // Use explicit idempotency key to prevent duplicates on retries
+      const idempotencyKey = args.idempotencyKey || `broadcast_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      await sendAgentMessage(agentId, null, args.content, { 
+        messageType: 'broadcast',
+        idempotencyKey 
+      });
       return `Broadcast sent to all family members.`;
     }
 

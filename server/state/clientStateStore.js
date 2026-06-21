@@ -61,3 +61,30 @@ export async function deleteUserState({ db, userId, key }) {
     [userId, key]
   );
 }
+
+export async function getWorkspaceState({ db, workspaceId, key = WORKSPACE_STATE_KEY }) {
+  const result = await db.query(
+    'SELECT value FROM workspace_client_state WHERE workspace_id = $1 AND key = $2',
+    [workspaceId, key]
+  );
+  return result.rows[0]
+    ? { found: true, source: 'database', value: result.rows[0].value }
+    : { found: false, source: 'missing', value: null };
+}
+
+export async function setWorkspaceState({ db, workspaceId, key = WORKSPACE_STATE_KEY, value }) {
+  await db.query(
+    `INSERT INTO workspace_client_state (workspace_id, key, value)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (workspace_id, key) DO UPDATE
+     SET value = $3, updated_at = NOW()`,
+    [workspaceId, key, JSON.stringify(value)]
+  );
+}
+
+export async function deleteWorkspaceState({ db, workspaceId, key = WORKSPACE_STATE_KEY }) {
+  await db.query(
+    'DELETE FROM workspace_client_state WHERE workspace_id = $1 AND key = $2',
+    [workspaceId, key]
+  );
+}

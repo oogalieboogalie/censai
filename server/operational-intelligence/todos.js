@@ -3,10 +3,10 @@ import { ensureOperationalIntelligenceSchema } from './schema.js';
 import { itemData, rowToItem } from './todoModel.js';
 import { withTransaction } from './transactions.js';
 
-const defaultOwner = { kind: 'user', id: 'local-user' };
-
 function routeActor(input) {
-  return input.actor || input.owner || defaultOwner;
+  const actor = input.actor || input.owner;
+  if (!actor) throw new Error('actor is required');
+  return actor;
 }
 
 async function requireWorkspaceArtifact(ctx, { workspaceId, artifactId, label }) {

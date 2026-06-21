@@ -15,6 +15,13 @@ export async function getJulesSessions({ refresh = false, includeCompleted = fal
     return data;
   }
 
+export async function getJulesQueue() {
+    const res = await fetch('/api/jules/queue');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Failed to fetch Jules queue');
+    return data;
+  }
+
 export async function getSession() {
   const res = await fetch('/api/auth/session');
   return res.json().catch(() => ({ authenticated: false }));

@@ -1,19 +1,17 @@
 const OWNER_KINDS = new Set(['user', 'agent', 'system']);
 const VISIBILITIES = new Set(['private', 'workspace', 'organization', 'public']);
 
-const defaultActor = { kind: 'user', id: 'local-user' };
-
 function assertText(value, label) {
   const text = String(value || '').trim();
   if (!text) throw new Error(`${label} is required`);
   return text;
 }
 
-function actor(input = defaultActor) {
-  const kind = input.kind || defaultActor.kind;
-  const id = input.id || defaultActor.id;
+function actor(input) {
+  const kind = assertText(input?.kind, 'actor.kind');
+  const id = assertText(input?.id, 'actor.id');
   if (!OWNER_KINDS.has(kind)) throw new Error(`Invalid actor kind: ${kind}`);
-  return { kind, id: assertText(id, 'actor.id') };
+  return { kind, id };
 }
 
 function json(value) {
@@ -84,7 +82,7 @@ export async function createRelationship(ctx, input) {
     const event = await createWorkspaceEvent(ctx, {
       workspaceId,
       type: 'relationship.created',
-      actor: input.actor || defaultActor,
+      actor: input.actor,
       relationshipId: insert.rows[0].id,
       correlationId: input.correlationId,
       payload: { relationshipType: type, sourceArtifactId: input.sourceArtifactId, targetArtifactId: input.targetArtifactId },
@@ -121,4 +119,19 @@ export async function resolveArtifact(ctx, ref) {
     return rows[0] || null;
   }
   throw new Error('Unsupported artifact reference');
+}
+
+export async function createExternalArtifact(ctx, { workspaceId, type, title, provider, externalId, data = {}, metadata = {} }) {
+  if (!['notification', 'external_task', 'external_message'].includes(type)) {
+    throw new Error(`Invalid external artifact type: ${type}`);
+  }
+  return createArtifact(ctx, {
+    workspaceId,
+    owner: { kind: 'system', id: provider },
+    type,
+    title,
+    data: { ...data, externalId, provider },
+    metadata: { ...metadata, provider },
+    sourceRef: { kind: 'external', provider, externalId }
+  });
 }

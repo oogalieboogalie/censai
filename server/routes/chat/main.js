@@ -1,8 +1,10 @@
+import pool from '../../db.js';
 import { dbReady } from '../../dbState.js';
 import { logConversation, runHealingCascadeIfMentioned } from '../../memory.js';
 import { getApiKey, publicToolActions, publicTimings } from './shared.js';
 import { prepareChatContext } from './chatContext.js';
 import { runChatLoop } from './chatExecution.js';
+import { createSessionTrace, finalizeTrace } from '../../operational-intelligence/traces.js';
 
 export async function handleChat(req, res) {
   const { messages, agentId, windowId, workspaceId, currentProject, stream } = req.body;
@@ -43,6 +45,7 @@ export async function handleChat(req, res) {
     }
   }
 
+  let traceId = null;
   try {
     const setupStartedAt = Date.now();
     const {
@@ -53,13 +56,47 @@ export async function handleChat(req, res) {
       console.log(`[Perf] Chat setup (prepareChatContext) for agent ${agentId} took ${timings.setup_ms}ms`);
     }
 
+    if (dbReady()) {
+      try {
+        const trace = await createSessionTrace({ db: pool }, {
+          workspaceId: currentProject || 'default',
+          agentId,
+          windowId,
+          initialContext: { messagesCount: messages?.length || 0 }
+        });
+        traceId = trace.id;
+      } catch (traceErr) {
+        console.error('Failed to create session trace:', traceErr.message);
+      }
+    }
+
     sendEvent({ type: 'status', status: 'thinking', detail: { round: 1 } });
     if (changeImpact) sendEvent({ type: 'change_impact', impact: changeImpact });
 
     const { finalText, toolActions } = await runChatLoop({
-      agentId, windowId, workspaceId, chatMessages, toolsForCaller, reqModel, reqBaseUrl, reqApiKey, reqProvider, sendEvent, timings,
-      userId: req.session?.userId
+      agentId,
+      windowId,
+      workspaceId: workspaceId || currentProject || 'default',
+      chatMessages,
+      toolsForCaller,
+      reqModel,
+      reqBaseUrl,
+      reqApiKey,
+      reqProvider,
+      sendEvent,
+      timings,
+      userId: req.session?.userId,
+      traceId
     });
+
+    if (traceId) {
+      finalizeTrace({ db: pool }, {
+        traceId,
+        status: 'success',
+        finalText,
+        timings,
+      }).catch(err => console.error('Failed to finalize trace:', err.message));
+    }
 
     // Log conversation
     const lastUserMsg = messages?.filter(m => m.from === 'me').pop()?.text;
@@ -96,6 +133,14 @@ export async function handleChat(req, res) {
     }
   } catch (err) {
     console.error('Chat API error:', err.message);
+    if (traceId) {
+      finalizeTrace({ db: pool }, {
+        traceId,
+        status: 'failed',
+        finalText: `Error: ${err.message}`,
+        timings,
+      }).catch(e => console.error('Failed to finalize failed trace:', e.message));
+    }
     timings.total_ms = Date.now() - startedAt;
     if (isStreaming) {
       sendEvent({

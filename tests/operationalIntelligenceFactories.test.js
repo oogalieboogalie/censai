@@ -32,7 +32,7 @@ describe('operational intelligence factories', () => {
 
     const artifact = await createArtifact({ db }, {
       workspaceId: 'workspace-1',
-      owner: { kind: 'user', id: 'local-user' },
+      owner: { kind: 'user', id: 'user-7' },
       type: 'task',
       title: 'Ship it',
       data: { done: false },
@@ -50,7 +50,7 @@ describe('operational intelligence factories', () => {
   test('createWorkspaceEvent rejects missing workspace ids', async () => {
     await expect(createWorkspaceEvent({ db: dbWithResponses([]) }, {
       type: 'task.created',
-      actor: { kind: 'user', id: 'local-user' },
+      actor: { kind: 'user', id: 'user-7' },
     })).rejects.toThrow('workspaceId is required');
   });
 
@@ -197,6 +197,7 @@ describe('operational intelligence factories', () => {
       sourceArtifactId: 'list-1',
       targetArtifactId: 'task-1',
       type: 'contains',
+      actor: { kind: 'system', id: 'test-suite' },
     });
 
     expect(rel.id).toBe('rel-1');

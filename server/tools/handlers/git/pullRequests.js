@@ -2,8 +2,8 @@ import { getSubAgentById } from '../../../memory.js';
 import { logProjectActivity, isGithubProject } from '../../../workspaces.js';
 import { fetchGithub, resolveProjectForCall } from '../../helpers.js';
 
-export async function prStatus(agentId, args) {
-  const { project } = await resolveProjectForCall(agentId, args.project);
+export async function prStatus(agentId, args, context = {}) {
+  const { project } = await resolveProjectForCall(agentId, args.project, context);
   if (!isGithubProject(project)) return 'Error: not a GitHub project.';
   const pr = await fetchGithub(`/repos/${project.repo}/pulls/${args.pr_number}`);
   const reviews = await fetchGithub(`/repos/${project.repo}/pulls/${args.pr_number}/reviews`);
@@ -27,8 +27,8 @@ export async function prStatus(agentId, args) {
   ].join('\n');
 }
 
-export async function prComments(agentId, args) {
-  const { project } = await resolveProjectForCall(agentId, args.project);
+export async function prComments(agentId, args, context = {}) {
+  const { project } = await resolveProjectForCall(agentId, args.project, context);
   if (!isGithubProject(project)) return 'Error: not a GitHub project.';
   const repo = project.repo;
   const [reviewComments, issueComments, reviews] = await Promise.all([
@@ -53,12 +53,12 @@ export async function prComments(agentId, args) {
   }).join('\n\n---\n\n');
 }
 
-export async function mergePr(agentId, args) {
+export async function mergePr(agentId, args, context = {}) {
   const sub = await getSubAgentById(agentId);
   if (sub && sub.permission !== 'worker') {
     return `Error: ${sub.permission} sub-agents cannot merge PRs.`;
   }
-  const { project } = await resolveProjectForCall(agentId, args.project);
+  const { project } = await resolveProjectForCall(agentId, args.project, context);
   if (!isGithubProject(project)) return 'Error: not a GitHub project.';
 
   const pr = await fetchGithub(`/repos/${project.repo}/pulls/${args.pr_number}`);

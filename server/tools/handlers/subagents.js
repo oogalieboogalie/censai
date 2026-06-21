@@ -11,6 +11,7 @@ import {
 import {
   getProject,
   getProjectByName,
+  getProjectByRepoOrPath,
   isGithubProject,
   ensureSubAgentBranch,
   mirrorSubAgentToDisk,
@@ -106,6 +107,7 @@ export async function handleSubagentTool(agentId, name, args, context = {}) {
         class: agentClass || null,
         reviewSpecialty: args.review_specialty || null,
         systemPromptInject: args.review_specialty ? REVIEW_SPECIALTY_PROMPTS[args.review_specialty] : null,
+        tool_scopes: args.tools ? { mode: 'custom', tools: args.tools } : null,
       });
 
       // If this is a GitHub project and a worker sub-agent, give them their own branch
@@ -156,17 +158,36 @@ export async function handleSubagentTool(agentId, name, args, context = {}) {
       );
       if (!match) return `Error: No sub-agent found matching "${args.sub_agent}". Create them first or double check spelling.`;
 
+      let projectId = match.project_id || null;
+      let projectName = args.project || null;
+      if (args.project) {
+        let p = await getProject(args.project);
+        if (!p) {
+          p = await getProjectByName(agentId, args.project);
+        }
+        if (!p && args.project.includes('/')) {
+          p = await getProjectByName(agentId, args.project.split('/').pop());
+        }
+        if (!p) {
+          p = await getProjectByRepoOrPath(agentId, args.project);
+        }
+        if (p) {
+          projectId = p.id;
+          projectName = p.name;
+        }
+      }
+
       const task = await createAgentTask({
         parentId: agentId,
         assigneeId: match.id,
-        projectId: match.project_id || null,
-        project: args.project || match.project_id || null,
+        projectId,
+        project: projectName || args.project || (match.project_id ? match.project_id : null),
         title: args.title,
         prompt: args.prompt,
         priority: args.priority || 'normal',
         wakeId: context.agentWakeId || null,
       });
-      return `Successfully queued task "${task.title}" (ID: ${task.id}) for sub-agent "${match.name}". The task worker will execute it asynchronously.`;
+      return `Successfully queued task "${task.title}" (ID: ${task.id}) for sub-agent "${match.name}"${projectName ? ` scoped to project "${projectName}"` : ''}. The task worker will execute it asynchronously.`;
     }
 
     // ─── SUB-AGENT SCRATCHPAD ─────────────────────────────────────

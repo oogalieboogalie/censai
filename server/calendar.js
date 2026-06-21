@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import express from 'express';
 import pool from './db.js';
 import { dbReady } from './dbState.js';
+import { getOAuthCredential } from './credentials/oauthStore.js';
 
 export const calendarRouter = express.Router();
 
@@ -15,20 +16,13 @@ export async function getOAuthClient(userId) {
     GOOGLE_REDIRECT_URI
   );
   try {
-    let res;
-    if (userId) {
-      res = await pool.query('SELECT access_token, refresh_token, expiry_date, scope FROM user_tokens WHERE user_id = $1 AND provider = $2', [userId, 'google']);
-    } else {
-      res = await pool.query('SELECT access_token, refresh_token, expiry_date, scope FROM user_tokens WHERE provider = $1 LIMIT 1', ['google']);
-    }
-    if (res.rows.length === 0) return null;
-    const row = res.rows[0];
-    oauth2Client.setCredentials({
-      access_token: row.access_token,
-      refresh_token: row.refresh_token,
-      expiry_date: row.expiry_date ? Number(row.expiry_date) : undefined,
-      scope: row.scope
+    const tokens = await getOAuthCredential({
+      db: pool,
+      userId,
+      provider: 'google',
     });
+    if (!tokens) return null;
+    oauth2Client.setCredentials(tokens);
     return oauth2Client;
   } catch (err) {
     console.error('Failed to load OAuth credentials from database for user:', userId, err);

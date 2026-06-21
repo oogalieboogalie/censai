@@ -2,6 +2,7 @@ import { sovereignTestRouter } from '../sovereignTest.js';
 import { calendarRouter } from '../calendar.js';
 import { sheetsRouter } from '../sheets.js';
 import { youtubeRouter } from '../youtube.js';
+import { contextRouter } from '../routes/context.js';
 import { authRouter } from '../routes/auth.js';
 import { filesRouter } from '../routes/files/index.js';
 import { projectsRouter } from '../routes/projects/index.js';
@@ -27,6 +28,10 @@ import { commandsRouter } from '../routes/commands.js';
 import { keysRouter } from '../routes/keys.js';
 import { getSystemStatus } from '../health.js';
 import { runnerClient } from '../runner/client.js';
+import {
+  requireFeatureFlag,
+  requireLocalFilesystem,
+} from '../middleware/runtimeMode.js';
 
 export function mountRouters(app) {
   app.use('/api/auth', authRouter);
@@ -52,6 +57,7 @@ export function mountRouters(app) {
   app.use('/api/calendar', calendarRouter);
   app.use('/api/sheets', sheetsRouter);
   app.use('/api/youtube', youtubeRouter);
+  app.use('/api', contextRouter);
   app.use('/api/github', githubRouter);
   app.use('/api', projectsRouter);
   app.use('/api', filesRouter);
@@ -71,6 +77,11 @@ export function mountRouters(app) {
   app.use('/api', kubernetesRouter);
   app.use('/api/automation', automationRouter);
   app.use('/api', sandboxRouter);
+  app.use(
+    '/api/windows',
+    requireLocalFilesystem,
+    requireFeatureFlag('window-import')
+  );
   app.use('/api', windowImportRouter);
   app.use('/api', commandsRouter);
   app.use('/api/operational-intelligence', operationalIntelligenceRouter);

@@ -42,6 +42,7 @@ export const INTEGRATION_WINDOW_MANIFEST_DATA = [
     componentName: 'ProviderConnectWindow',
     componentPath: 'src/components/ProviderConnectWindow.jsx',
     defaultSize: { w: 460, h: 540 },
+    moduleMenu: { show: false, status: 'coming-soon' },
     integration: {
       provider: { id: 'linear', name: 'Linear', category: 'productivity', docsUrl: 'https://developers.linear.app/docs' },
       authMode: 'apiKey',
@@ -60,6 +61,7 @@ export const INTEGRATION_WINDOW_MANIFEST_DATA = [
     componentName: 'SheetsWindow',
     componentPath: 'src/components/SheetsWindow.jsx',
     defaultSize: { w: 720, h: 520 },
+    moduleMenu: { show: false, status: 'coming-soon' },
     integration: {
       provider: { id: 'google-sheets', name: 'Google Sheets', category: 'productivity' },
       authMode: 'oauth2',
@@ -69,5 +71,23 @@ export const INTEGRATION_WINDOW_MANIFEST_DATA = [
       defaultPermissions: ['read', 'write'],
     },
     launcher: { show: true, order: 160, icon: 'List', label: 'Spreadsheet', hint: 'Google Sheets grid' },
+  },
+  {
+    kind: 'contextFeed',
+    type: 'integration',
+    canvasType: 'contextFeed',
+    label: 'Context Feed',
+    componentName: 'ContextFeedWindow',
+    componentPath: 'src/components/ContextFeedWindow.jsx',
+    defaultSize: { w: 400, h: 500 },
+    integration: {
+      provider: { id: 'censai-context', name: 'Censai Context', category: 'productivity' },
+      authMode: 'none',
+      capabilities: ['read'],
+      embedMode: 'native',
+      dangerLevel: 'low',
+      defaultPermissions: ['read'],
+    },
+    launcher: { show: true, order: 115, icon: 'Chat', label: 'Context Feed', hint: 'Unified notification feed' },
   },
 ];

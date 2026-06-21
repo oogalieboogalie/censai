@@ -103,6 +103,7 @@ export const OPS_WINDOW_MANIFESTS = [
     componentName: 'AutomationWindow',
     componentPath: 'src/components/AutomationWindow.jsx',
     defaultSize: { w: 600, h: 500 },
+    moduleMenu: { show: false, status: 'coming-soon' },
     launcher: { show: true, order: 125, icon: 'Server', label: 'Automation', hint: 'manage running scripts', sizeOverride: { w: 600, h: 500 } },
   },
   {
@@ -121,6 +122,7 @@ export const OPS_WINDOW_MANIFESTS = [
     componentName: 'RegistryTestWindow',
     componentPath: 'src/components/RegistryTestWindow.jsx',
     defaultSize: { w: 400, h: 300 },
+    moduleMenu: { show: false, status: 'internal' },
     launcher: { show: true, order: 130, icon: 'Tools', label: 'Registry Test Window', hint: 'test window' },
   },
   {
@@ -139,6 +141,7 @@ export const OPS_WINDOW_MANIFESTS = [
     componentName: 'KubernetesWindow',
     componentPath: 'src/components/KubernetesWindow.jsx',
     defaultSize: { w: 720, h: 540 },
+    moduleMenu: { show: false, status: 'coming-soon' },
     launcher: { show: true, order: 170, icon: 'Tools', label: 'Kubernetes', hint: 'read-only cluster view' },
   },
   {
@@ -158,5 +161,24 @@ export const OPS_WINDOW_MANIFESTS = [
     componentPath: 'src/components/WindowImporterWindow.jsx',
     defaultSize: { w: 560, h: 520 },
     launcher: { show: true, order: 155, icon: 'Tools', label: 'Import Window', hint: 'drop AI Studio exports onto the canvas' },
+  },
+  {
+    kind: 'agent_trace',
+    canvasType: 'agent_trace',
+    label: 'Agentic Tracing',
+    componentName: 'TracingWindow',
+    componentPath: 'src/components/TracingWindow.jsx',
+    defaultSize: { w: 800, h: 600 },
+    launcher: { show: true, order: 85, icon: 'Search', label: 'Agent Tracing', hint: 'observability board', sizeOverride: { w: 800, h: 600 } },
+  },
+  {
+    kind: 'provenance_explorer',
+    canvasType: 'provenance_explorer',
+    label: 'Provenance Explorer',
+    componentName: 'ProvenanceExplorerWindow',
+    componentPath: 'src/components/ProvenanceExplorerWindow.jsx',
+    defaultSize: { w: 800, h: 600 },
+    moduleMenu: { show: false, status: 'coming-soon' },
+    launcher: { show: true, order: 180, icon: 'Search', label: 'Provenance', hint: 'trace AI code to prompt' },
   },
 ];

@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import { getSecret } from './secrets.js';
+import { resolveOverseerRunner } from './overseer/runner.js';
 
 // Overseer Watcher Singleton State
 const state = {
@@ -48,15 +49,13 @@ export function stopWatcher() {
   state.countdown = state.intervalSeconds;
 }
 
-// Run the python overseer audit script silently
+// Run the configured overseer script silently.
 export function runAuditNow() {
   if (state.isAuditing) return;
 
-  const scriptPath = process.env.OVERSEER_SCRIPT_PATH;
-  const cwd = process.env.OVERSEER_SCRIPT_CWD;
-  if (!scriptPath || !cwd || !state.repo) {
+  if (!state.repo) {
     state.lastRunStatus = 'failed';
-    state.logs += `[${new Date().toLocaleString()}] Overseer is not configured: set OVERSEER_SCRIPT_PATH, OVERSEER_SCRIPT_CWD, and a target repository (OVERSEER_DEFAULT_REPO or the window's repo picker).\n`;
+    state.logs += `[${new Date().toLocaleString()}] Overseer needs a target repository.\n`;
     return;
   }
 
@@ -69,18 +68,18 @@ export function runAuditNow() {
 
   const token = getSecret('GITHUB_TOKEN') || process.env.GITHUB_TOKEN;
 
-  // Run python script using spawn (this executes silently without bringing up a command window)
-  const child = spawn('python', [
-    scriptPath,
-    '--repo', state.repo,
-    '--execute-recovery',
-    '--auto-merge'
-  ], {
-    cwd,
+  const runner = resolveOverseerRunner({
+    scriptPath: process.env.OVERSEER_SCRIPT_PATH,
+    cwd: process.env.OVERSEER_SCRIPT_CWD,
+    repo: state.repo,
+  });
+  const child = spawn(runner.executable, runner.args, {
+    cwd: runner.cwd,
     env: {
       ...process.env,
       GITHUB_TOKEN: token
-    }
+    },
+    windowsHide: true,
   });
 
   child.stdout.on('data', (data) => {
@@ -114,7 +113,7 @@ export function runAuditNow() {
     state.isAuditing = false;
     state.lastRunStatus = 'failed';
     const errorTime = new Date().toLocaleString();
-    state.logs += `\n[${errorTime}] Failed to launch python Overseer script: ${err.message}\n`;
+    state.logs += `\n[${errorTime}] Failed to launch Overseer script: ${err.message}\n`;
     
     // Reset countdown
     if (state.isRunning) {

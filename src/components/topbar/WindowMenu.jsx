@@ -49,6 +49,7 @@ const PROPS_BY_KIND = {
 //  - group: created by rubber-banding a region on the canvas
 //  - todo: legacy alias of `todos`
 const EXCLUDED_KINDS = new Set(['agent', 'group', 'todo', 'generic', 'chrome']);
+const availableInMenu = (manifest) => manifest?.moduleMenu?.show !== false;
 
 // Curated ordering / grouping. Any registered kind not listed here still shows
 // up automatically under "More", so new windows never go button-less again.
@@ -65,7 +66,7 @@ function buildSections() {
   const claimed = new Set();
   const sections = CATEGORIES.map((cat) => {
     const items = cat.kinds
-      .filter((kind) => WINDOW_MANIFEST_BY_KIND[kind] && !EXCLUDED_KINDS.has(kind))
+      .filter((kind) => WINDOW_MANIFEST_BY_KIND[kind] && availableInMenu(WINDOW_MANIFEST_BY_KIND[kind]) && !EXCLUDED_KINDS.has(kind))
       .map((kind) => {
         claimed.add(kind);
         return { kind, label: WINDOW_MANIFEST_BY_KIND[kind].label };
@@ -74,7 +75,7 @@ function buildSections() {
   }).filter((s) => s.items.length > 0);
 
   const leftovers = WINDOW_MANIFESTS
-    .filter((m) => !claimed.has(m.kind) && !EXCLUDED_KINDS.has(m.kind))
+    .filter((m) => !claimed.has(m.kind) && availableInMenu(m) && !EXCLUDED_KINDS.has(m.kind))
     .map((m) => ({ kind: m.kind, label: m.label }));
 
   if (leftovers.length) sections.push({ label: 'More', items: leftovers });
@@ -112,7 +113,7 @@ export function WindowMenu({ onSpawn }) {
         onClick={() => setMenuOpen((s) => !s)}
         style={{ all: 'unset', cursor: 'pointer', padding: '4px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ink-soft)', background: menuOpen ? 'var(--surface-2)' : 'transparent' }}
       >
-        <Icon.NewWindow size={16} />
+        <img src="/assets/logolite.png" alt="" style={{ height: 28, width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 1px 3px rgba(8,16,216,0.1))' }} />
         Modules
       </button>
 

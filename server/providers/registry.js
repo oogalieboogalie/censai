@@ -112,6 +112,48 @@ const ADAPTERS = {
       }
     },
   },
+
+  slack: {
+    id: 'slack',
+    authMode: 'oauth2',
+    getCredential: async () => 'oauth-placeholder',
+    async test() { return { ok: true, detail: 'Slack Stub' }; }
+  },
+
+  jira: {
+    id: 'jira',
+    authMode: 'oauth2',
+    getCredential: async () => 'oauth-placeholder',
+    async test() { return { ok: true, detail: 'Jira Stub' }; }
+  },
+
+  asana: {
+    id: 'asana',
+    authMode: 'oauth2',
+    getCredential: async () => 'oauth-placeholder',
+    async test() { return { ok: true, detail: 'Asana Stub' }; }
+  },
+
+  monday: {
+    id: 'monday',
+    authMode: 'oauth2',
+    getCredential: async () => 'oauth-placeholder',
+    async test() { return { ok: true, detail: 'Monday Stub' }; }
+  },
+
+  teams: {
+    id: 'teams',
+    authMode: 'oauth2',
+    getCredential: async () => 'oauth-placeholder',
+    async test() { return { ok: true, detail: 'Teams Stub' }; }
+  },
+
+  'censai-context': {
+    id: 'censai-context',
+    authMode: 'none',
+    getCredential: async () => 'none',
+    async test() { return { ok: true, detail: 'Censai Context Feed' }; }
+  },
 };
 
 export function getProviderAdapter(id) {

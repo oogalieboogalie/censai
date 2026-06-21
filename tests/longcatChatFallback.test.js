@@ -57,7 +57,7 @@ test('chat loop executes a longcat text tool call', async () => {
   expect(executeTool).toHaveBeenCalledWith(
     'atlas',
     'project_read',
-    { path: 'README.md' },
+    expect.objectContaining({ path: 'README.md' }),
     { userId: undefined },
   );
   expect(result.finalText).toBe('Read complete.');

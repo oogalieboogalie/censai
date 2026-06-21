@@ -13,6 +13,7 @@ function readOptionalWorkspaceId(req) {
 export function commandContextFromRequest(req) {
   return {
     userId: String(req?.session?.userId ?? '').trim() || null,
+    userRole: String(req?.session?.userRole ?? 'user').trim().toLowerCase(),
     workspaceId: readOptionalWorkspaceId(req),
     actor: actorFromRequest(req),
     runtimeMode: getRuntimeMode(),

@@ -5,18 +5,23 @@ const generateAuthUrl = jest.fn(({ state }) => `https://accounts.example/oauth?s
 const getToken = jest.fn();
 const setCredentials = jest.fn();
 const query = jest.fn();
+const saveOAuthCredential = jest.fn();
+const getUserInfo = jest.fn();
 
 jest.unstable_mockModule('googleapis', () => ({
   google: {
     auth: {
       OAuth2: jest.fn(() => ({ generateAuthUrl, getToken, setCredentials })),
     },
-    oauth2: jest.fn(),
+    oauth2: jest.fn(() => ({ userinfo: { get: getUserInfo } })),
   },
 }));
 
 jest.unstable_mockModule('../server/db.js', () => ({
   default: { query },
+}));
+jest.unstable_mockModule('../server/credentials/oauthStore.js', () => ({
+  saveOAuthCredential,
 }));
 
 const { default: express } = await import('express');
@@ -62,6 +67,43 @@ describe('Google OAuth route', () => {
     expect(response.status).toBe(400);
     expect(response.text).toContain('Google authorization was not completed');
     expect(getToken).not.toHaveBeenCalled();
+  });
+
+  test('stores OAuth credentials through the encrypted store without session tokens', async () => {
+    getToken.mockResolvedValue({
+      tokens: {
+        access_token: 'access-secret',
+        refresh_token: 'refresh-secret',
+        expiry_date: 123,
+        scope: 'calendar',
+      },
+    });
+    getUserInfo.mockResolvedValue({
+      data: { email: 'user@example.com', name: 'User' },
+    });
+    query.mockResolvedValueOnce({
+      rows: [{ id: 7, email: 'user@example.com', name: 'User', role: 'user' }],
+    });
+    const save = jest.fn((callback) => callback());
+    const session = { oauth_state: 'valid-state', save };
+    const app = express();
+    app.use((req, _res, next) => {
+      req.session = session;
+      next();
+    });
+    app.use('/api/auth', authRouter);
+
+    const response = await request(app)
+      .get('/api/auth/google/callback?code=code&state=valid-state');
+
+    expect(response.status).toBe(302);
+    expect(saveOAuthCredential).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 7,
+      provider: 'google',
+      tokens: expect.objectContaining({ refresh_token: 'refresh-secret' }),
+    }));
+    expect(session.googleTokens).toBeUndefined();
+    expect(session.userId).toBe(7);
   });
 
   test('tells the client whether the active deployment requires BYOK', async () => {

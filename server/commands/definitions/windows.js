@@ -1,23 +1,4 @@
-const FORBIDDEN_PATTERNS = [
-  { code: 'child_process', pattern: /\bchild_process\b/ },
-  { code: 'fs', pattern: /\bfs\b/ },
-  { code: 'eval', pattern: /\beval\s*\(/ },
-  { code: 'new-function', pattern: /\bnew\s+Function\b/ },
-  { code: 'import-http', pattern: /import\s*\(\s*['"]https?:/ },
-];
-
-function slugify(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .replace(/\s+(.)/g, (_, char) => char.toUpperCase())
-    .replace(/^./, char => char.toLowerCase());
-}
-
-function pascalCase(value) {
-  const slug = slugify(value || 'Imported Window');
-  return slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'ImportedWindow';
-}
+import { validateGeneratedWindow } from '../../window-import/validation.js';
 
 export const windowCommands = [
   {
@@ -46,20 +27,9 @@ export const windowCommands = [
     requiredCapabilities: ['window.import'],
     sideEffects: [],
     async handler({ input, context }) {
-      const suggestedKind = slugify(input.kind || input.label || 'Imported Window');
-      const componentName = `${pascalCase(suggestedKind)}Window`;
-      const combined = [input.rawJsx || '', input.rawCss || ''].join('\n');
-      const issues = FORBIDDEN_PATTERNS
-        .filter(entry => entry.pattern.test(combined))
-        .map(entry => ({
-          code: entry.code,
-          message: `Generated code contains blocked pattern: ${entry.code}`,
-        }));
+      const validation = validateGeneratedWindow(input);
       return {
-        ok: issues.length === 0,
-        suggestedKind,
-        componentName,
-        issues,
+        ...validation,
         runtimeMode: context.runtimeMode,
       };
     },

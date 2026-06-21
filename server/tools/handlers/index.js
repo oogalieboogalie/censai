@@ -15,6 +15,7 @@ import { postgresSchemaAudit } from './database/audit.js';
 import { handleContainerTool } from './container.js';
 import { handleHttpTool } from './http.js';
 import { handleAnalyzeDeps } from './deps/index.js';
+import { handleVulnerabilityAudit } from './deps/vulnerability.js';
 import { handleRunnerTool } from './runner.js';
 import { handleSandboxTool } from './sandbox.js';
 import { handleTerminalTool } from './terminal.js';
@@ -22,7 +23,9 @@ import { handleDispatchTool } from './dispatch.js';
 import { handleSheetsTool } from './sheets.js';
 import { handleMailcowTool } from './mailcow.js';
 import { handleVexTool } from './vex.js';
+import { handlePolicyTool } from './policy.js';
 import { handleToolDiscovery } from './discovery.js';
+
 
 export const TOOL_REGISTRY = {
   // Tool discovery
@@ -61,14 +64,14 @@ export const TOOL_REGISTRY = {
   'github_list_issues': (agentId, name, args) => githubListIssues(args),
   'github_create_issue': (agentId, name, args) => githubCreateIssue(args),
   'github_comment_issue': (agentId, name, args) => githubCommentIssue(args),
-  'pr_status': (agentId, name, args) => prStatus(agentId, args),
-  'pr_comments': (agentId, name, args) => prComments(agentId, args),
-  'merge_pr': (agentId, name, args) => mergePr(agentId, args),
-  'local_git_status': (agentId, name, args) => localGitStatus(agentId, args),
-  'local_git_fetch': (agentId, name, args) => localGitFetch(agentId, args),
-  'local_git_pull_ff_only': (agentId, name, args) => localGitPullFfOnly(agentId, args),
-  'local_git_checkpoint': (agentId, name, args) => localGitCheckpoint(agentId, args),
-  'local_git_verify': (agentId, name, args) => localGitVerify(agentId, args),
+  'pr_status': (agentId, name, args, context) => prStatus(agentId, args, context),
+  'pr_comments': (agentId, name, args, context) => prComments(agentId, args, context),
+  'merge_pr': (agentId, name, args, context) => mergePr(agentId, args, context),
+  'local_git_status': (agentId, name, args, context) => localGitStatus(agentId, args, context),
+  'local_git_fetch': (agentId, name, args, context) => localGitFetch(agentId, args, context),
+  'local_git_pull_ff_only': (agentId, name, args, context) => localGitPullFfOnly(agentId, args, context),
+  'local_git_checkpoint': (agentId, name, args, context) => localGitCheckpoint(agentId, args, context),
+  'local_git_verify': (agentId, name, args, context) => localGitVerify(agentId, args, context),
 
   // Local
   'local_list_dir': handleLocalTool,
@@ -152,4 +155,11 @@ export const TOOL_REGISTRY = {
   'vex_run': handleVexTool,
   'vex_status': handleVexTool,
   'vex_list_agents': handleVexTool,
+
+  // Vulnerability
+  'vulnerability_audit': handleVulnerabilityAudit,
+
+  // Policy
+  'policy_evaluate': handlePolicyTool,
+  'policy_record_evidence': handlePolicyTool,
 };
