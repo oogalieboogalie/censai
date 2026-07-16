@@ -1,38 +1,63 @@
-import { getSecret } from '../../secrets.js';
+import {
+  getGitHubClient,
+  parseIssueState,
+  parsePositiveInteger,
+  parseRepository,
+  sendGitHubError,
+} from './client.js';
 
 export async function createIssue(req, res) {
-  const { repo, title, body, labels } = req.body;
-  if (!repo || !title) {
+  const { repo: repository, title, body, labels } = req.body;
+  if (!repository || !title) {
     return res.status(400).json({ error: 'Missing repo or title in request body' });
   }
 
-  const token = getSecret('GITHUB_TOKEN');
-  if (!token) return res.status(401).json({ error: 'GITHUB_TOKEN not found in .env' });
+  try {
+    const { owner, repo } = parseRepository(repository);
+    const octokit = getGitHubClient();
+    const { data } = await octokit.rest.issues.create({
+      owner,
+      repo,
+      title: String(title).slice(0, 256),
+      body: body ? String(body) : '',
+      labels: Array.isArray(labels) ? labels.map(String).slice(0, 50) : [],
+    });
+    return res.json({ ok: true, issueNumber: data.number, url: data.html_url });
+  } catch (err) {
+    return sendGitHubError(res, err);
+  }
+}
+
+export async function listIssues(req, res) {
+  try {
+    const { owner, repo } = parseRepository(req.query.repo);
+    const state = parseIssueState(req.query.state);
+    const octokit = getGitHubClient();
+    const { data } = await octokit.rest.issues.listForRepo({ owner, repo, state, per_page: 100 });
+    return res.json(data.filter((item) => !item.pull_request));
+  } catch (err) {
+    return sendGitHubError(res, err);
+  }
+}
+
+export async function addLabels(req, res) {
+  const { repo: repository, number, labels } = req.body;
+  if (!repository || !number || !Array.isArray(labels)) {
+    return res.status(400).json({ error: 'Missing repo, number, or labels in request body' });
+  }
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${repo}/issues`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Homebase-App'
-      },
-      body: JSON.stringify({
-        title,
-        body: body || '',
-        labels: labels || []
-      })
+    const { owner, repo } = parseRepository(repository);
+    const issueNumber = parsePositiveInteger(number, 'number');
+    const octokit = getGitHubClient();
+    const { data } = await octokit.rest.issues.setLabels({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      labels: labels.map(String).slice(0, 50),
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return res.status(response.status).json({ error: errText });
-    }
-
-    const result = await response.json();
-    res.json({ ok: true, issueNumber: result.number, url: result.html_url });
+    return res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendGitHubError(res, err);
   }
 }

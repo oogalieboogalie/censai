@@ -42,6 +42,7 @@ function createApp(session = { userId: 7, userRole: 'user' }) {
 describe('commands routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPool.query.mockResolvedValue({ rows: [{ id: 'run-1' }] });
     process.env = { ...envSnapshot };
     process.env.HOMEBASE_MODE = 'private_server';
   });
@@ -87,12 +88,15 @@ describe('commands routes', () => {
       actor: { kind: 'user', id: '7' },
     }));
     expect(response.body.context).toEqual({
+      tenantId: null,
       userId: '7',
       userRole: 'user',
       workspaceId: 'workspace-1',
       actor: { kind: 'user', id: '7' },
+      principal: 'user',
       runtimeMode: 'private_server',
     });
+    expect(response.body.runId).toBe('run-1');
     expect(response.body.result).toEqual({
       key: 'homebase.workspace.v1',
       workspaceId: 'workspace-1',
@@ -162,6 +166,7 @@ describe('commands routes', () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual(expect.objectContaining({
       ok: false,
+      runId: 'run-1',
       code: 'CAPABILITY_DENIED',
       error: 'Missing required capability: window.import',
       auditEventId: 'event-denied',
@@ -186,6 +191,7 @@ describe('commands routes', () => {
 
     expect(response.status).toBe(400);
     expect(setWorkspaceState).not.toHaveBeenCalled();
+    expect(response.body.runId).toBe('run-1');
     expect(response.body.error).toBe('workspaceId is required');
     expect(response.body.auditEventId).toBeNull();
   });

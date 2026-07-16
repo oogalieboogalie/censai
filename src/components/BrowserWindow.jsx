@@ -55,6 +55,18 @@ export function BrowserWindow({ win, onUpdate }) {
     }
   };
 
+  const handleOpenExternal = () => {
+    const invoke = window.__TAURI__?.core?.invoke || window.__TAURI_INTERNALS__?.invoke;
+    if (activeUrl && invoke) {
+      invoke('open_external_window', {
+        url: activeUrl,
+        title: getSubtitle() || 'External Browser',
+      }).catch(err => {
+        console.error('Failed to open external Tauri window', err);
+      });
+    }
+  };
+
   return (
     <>
       <WindowTitle 
@@ -68,7 +80,7 @@ export function BrowserWindow({ win, onUpdate }) {
       
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
         {/* Address Bar */}
-        <form onSubmit={onSubmit} style={{ display: 'flex', padding: '6px 12px', borderBottom: '1px solid var(--hairline)', background: 'var(--surface-2)' }}>
+        <form onSubmit={onSubmit} style={{ display: 'flex', gap: 8, padding: '6px 12px', borderBottom: '1px solid var(--hairline)', background: 'var(--surface-2)', alignItems: 'center' }}>
           <input 
             value={draftUrl}
             onChange={e => setDraftUrl(e.target.value)}
@@ -76,6 +88,35 @@ export function BrowserWindow({ win, onUpdate }) {
             placeholder="Enter URL (e.g. youtube.com/watch?v=...)"
             style={{ flex: 1, border: '1px solid var(--hairline)', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', outline: 'none', background: 'var(--surface)', color: 'var(--ink)' }}
           />
+          {((window.__TAURI__ && window.__TAURI__.core?.invoke) || window.__TAURI_INTERNALS__?.invoke) && activeUrl && (
+            <button
+              type="button"
+              onClick={handleOpenExternal}
+              title="Open in native standalone window"
+              style={{
+                all: 'unset',
+                cursor: 'pointer',
+                width: 26,
+                height: 26,
+                borderRadius: 6,
+                display: 'grid',
+                placeItems: 'center',
+                color: 'var(--ink-soft)',
+                background: 'var(--surface)',
+                border: '1px solid var(--hairline)',
+                flexShrink: 0,
+                transition: 'background 0.15s, color 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </button>
+          )}
         </form>
 
         {/* Iframe Container */}

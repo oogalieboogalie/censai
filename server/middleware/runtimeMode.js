@@ -12,6 +12,22 @@ export function getRuntimeMode() {
   );
 }
 
+// Aggregates the full per-request context that handlers need. Pulls tenantId +
+// workspaceId from req.workspaceContext (populated by resolveWorkspaceContext)
+// and actor/principal from req.session (set by server/routes/auth.js). Returns
+// a plain object so callers can destructure or pass to logging.
+export function getRequestContext(req) {
+  const session = req?.session || {};
+  const workspaceContext = req?.workspaceContext || {};
+  return {
+    tenantId: workspaceContext.tenantId ?? null,
+    workspaceId: workspaceContext.workspaceId ?? workspaceContext.id ?? null,
+    actor: session.userId ?? null,
+    principal: session.userRole ?? null,
+    runtimeMode: getRuntimeMode(),
+  };
+}
+
 export function isCloudRuntime(mode = getRuntimeMode()) {
   return mode === RUNTIME_MODES.CLOUD_SAAS;
 }

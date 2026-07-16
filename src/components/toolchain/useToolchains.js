@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
 
 const API = '/api/sandbox';
 
@@ -24,7 +25,6 @@ export function useToolchains() {
   const [rebuildError, setRebuildError]   = useState(null);
 
   const logEndRef  = useRef(null);
-  const pollRef    = useRef(null);
 
   // ── Load config from server ──────────────────────────────────────────────
   const fetchConfig = useCallback(async () => {
@@ -87,23 +87,13 @@ export function useToolchains() {
       setRebuildStatus(data.status);
       setRebuildLog(data.log || []);
       setRebuildError(data.error || null);
-      if (data.status === 'done' || data.status === 'error') {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-        if (data.status === 'done') detectAll();
+      if (data.status === 'done') {
+        detectAll();
       }
     } catch { /* ignore */ }
   }, [detectAll]);
 
-  useEffect(() => {
-    if (rebuildStatus === 'running') {
-      if (!pollRef.current) pollRef.current = setInterval(pollRebuild, 1500);
-    } else {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    return () => clearInterval(pollRef.current);
-  }, [rebuildStatus, pollRebuild]);
+  useVisibilityAwareInterval(pollRebuild, rebuildStatus === 'running' ? 1500 : null);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -1,6 +1,6 @@
 import { actorFromRequest } from '../context/actorContext.js';
 import { workspaceContextFromRequest } from '../context/requestContext.js';
-import { getRuntimeMode } from '../middleware/runtimeMode.js';
+import { getRequestContext } from '../middleware/runtimeMode.js';
 
 function readOptionalWorkspaceId(req) {
   try {
@@ -11,11 +11,15 @@ function readOptionalWorkspaceId(req) {
 }
 
 export function commandContextFromRequest(req) {
+  const requestContext = getRequestContext(req);
+  const userRole = String(req?.session?.userRole ?? 'user').trim().toLowerCase();
   return {
+    tenantId: requestContext.tenantId ?? null,
     userId: String(req?.session?.userId ?? '').trim() || null,
-    userRole: String(req?.session?.userRole ?? 'user').trim().toLowerCase(),
-    workspaceId: readOptionalWorkspaceId(req),
+    userRole,
+    workspaceId: requestContext.workspaceId || readOptionalWorkspaceId(req),
     actor: actorFromRequest(req),
-    runtimeMode: getRuntimeMode(),
+    principal: requestContext.principal ?? userRole,
+    runtimeMode: requestContext.runtimeMode,
   };
 }

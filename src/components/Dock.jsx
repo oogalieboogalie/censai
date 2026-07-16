@@ -4,10 +4,13 @@ import ReactDOM from 'react-dom';
 import { Icon } from './Icons.jsx';
 import { AgentAvatar } from './Agents.jsx';
 import { getAgents, getAgentById } from '../lib/agentStore.js';
+import { useDockVisible } from './dock/useDockVisibility.js';
+import { DockVisibilityToggle } from './dock/DockVisibilityToggle.jsx';
 
-export const DEFAULT_GROUPS = [
-  { id: 'core', name: 'Core Team', hue: 5, agentIds: ['architect','censai','atlas','genesis','nexus','foundation','echo'], collapsed: false },
-];
+// Re-exported for backward compat — many consumers import DEFAULT_GROUPS
+// from this file. The canonical home is now src/lib/dockDefaults.js
+// (extracted in B3 to break the import cycle via useDockVisibility).
+export { DEFAULT_GROUPS } from '../lib/dockDefaults.js';
 
 export function MultiGroupDock({ groups, onGroupsChange, focusMode, dockOffset, onMoveDock, onDragAgent }) {
   const [moving, setMoving] = React.useState(false);
@@ -15,6 +18,9 @@ export function MultiGroupDock({ groups, onGroupsChange, focusMode, dockOffset, 
   const [drag, setDrag] = React.useState(null);
   const [editGroupId, setEditGroupId] = React.useState(null);
   const [addingGroup, setAddingGroup] = React.useState(false);
+  // Brief B3 — dock visibility (master + per-group + per-agent).
+  const dockVisible = useDockVisible();
+  const [showToggle, setShowToggle] = React.useState(false);
 
   const onMovePointerDown = (e) => { moveStart.current = { y: e.clientY, offset: dockOffset || 0 }; setMoving(true); e.currentTarget.setPointerCapture(e.pointerId); };
   const onMovePointerMove = (e) => { if (!moving || !moveStart.current) return; onMoveDock(Math.max(-240, Math.min(240, moveStart.current.offset + e.clientY - moveStart.current.y))); };
@@ -40,12 +46,34 @@ export function MultiGroupDock({ groups, onGroupsChange, focusMode, dockOffset, 
     window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
   };
 
+  // Brief B3 — collapsed marker when the dock is hidden. The marker
+  // opens the visibility toggle so the user always has a way to bring
+  // the dock back.
+  if (!dockVisible) {
+    return (
+      <div style={{ position: 'absolute', right: 22, top: '50%', transform: `translateY(calc(-50% + ${dockOffset || 0}px))`, zIndex: 30 }}>
+        <button
+          type="button"
+          onClick={() => setShowToggle((v) => !v)}
+          data-testid="dock-collapsed-marker"
+          title="Show dock"
+          style={{ all: 'unset', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', background: 'var(--surface)', color: 'var(--ink-soft)', display: 'grid', placeItems: 'center', boxShadow: 'inset 0 0 0 1px var(--hairline), 0 1px 2px oklch(0 0 0 / 0.05)' }}
+        >
+          <Icon.Group size={14} />
+        </button>
+        {showToggle && <DockVisibilityToggle groups={groups} onClose={() => setShowToggle(false)} />}
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: 'absolute', right: 22, top: '50%', transform: `translateY(calc(-50% + ${dockOffset || 0}px))`, zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, opacity: focusMode ? 0 : 1, transition: 'opacity 0.4s ease', pointerEvents: focusMode ? 'none' : 'auto' }}
       onMouseEnter={(e) => { if (focusMode) { e.currentTarget.style.opacity = 1; e.currentTarget.style.pointerEvents = 'auto'; } }}
       onMouseLeave={(e) => { if (focusMode) { e.currentTarget.style.opacity = 0; e.currentTarget.style.pointerEvents = 'none'; } }}>
       {groups.map(g => <GroupRail key={g.id} group={g} onToggle={() => updateGroup(g.id, { collapsed: !g.collapsed })} onEdit={() => setEditGroupId(g.id)} onAvatarPointerDown={onAvatarPointerDown} onMovePointerDown={onMovePointerDown} onMovePointerMove={onMovePointerMove} onMovePointerUp={onMovePointerUp} moving={moving} />)}
       <button onClick={() => setAddingGroup(true)} title="Add group" style={{ all: 'unset', cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', background: 'var(--surface)', color: 'var(--ink-faint)', display: 'grid', placeItems: 'center', boxShadow: 'inset 0 0 0 1px var(--hairline), 0 1px 2px oklch(0 0 0 / 0.05)' }}><Icon.Plus size={14} /></button>
+      <button onClick={() => setShowToggle((v) => !v)} title="Toggle dock visibility" data-testid="dock-visibility-btn" style={{ all: 'unset', cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', background: 'var(--surface)', color: 'var(--ink-faint)', display: 'grid', placeItems: 'center', boxShadow: 'inset 0 0 0 1px var(--hairline), 0 1px 2px oklch(0 0 0 / 0.05)' }}><Icon.Gear size={14} /></button>
+      {showToggle && <DockVisibilityToggle groups={groups} onClose={() => setShowToggle(false)} />}
       {editGroupId && <GroupEditor group={groups.find(g => g.id === editGroupId)} onSave={(patch) => { updateGroup(editGroupId, patch); setEditGroupId(null); }} onDelete={() => { if (groups.length > 1) { removeGroup(editGroupId); setEditGroupId(null); } }} canDelete={groups.length > 1} onClose={() => setEditGroupId(null)} />}
       {addingGroup && <GroupEditor group={{ id: '', name: '', hue: Math.round(Math.random() * 360), agentIds: [], collapsed: false }} onSave={(g) => { addGroup({ ...g, id: (g.name || 'group').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).slice(2, 6) }); setAddingGroup(false); }} onClose={() => setAddingGroup(false)} isNew />}
       {drag && ReactDOM.createPortal(<div style={{ position: 'fixed', left: drag.x - 16, top: drag.y - 16, pointerEvents: 'none', zIndex: 1000, filter: 'drop-shadow(0 8px 14px oklch(0 0 0 / 0.25))' }}><AgentAvatar agent={drag.agent} size={32} ring /></div>, document.body)}

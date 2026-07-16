@@ -1,5 +1,7 @@
 import React from 'react';
 import { Icon } from './Icons.jsx';
+import { AgentIcon } from '../lib/agentIcons/sprite.jsx';
+import { hasVectorIcon } from '../lib/agentIcons/registry.js';
 
 export const BUILT_IN_AGENTS = [
   { id: 'architect',  name: 'The Architect', role: 'Orchestrates projects',     glyph: 'A', kind: 'lead', hue: 12  },
@@ -160,7 +162,9 @@ export function AgentAvatar({ agent, size = 28, ring = false, dragHandle = false
           opacity: 0.4,
         }}
       />
-      <AgentVectorIcon id={agent.id} size={iconSize} />
+      {hasVectorIcon(agent)
+        ? <AgentIcon agent={agent} size={iconSize} />
+        : <AgentVectorIcon id={agent.id} size={iconSize} />}
       {showBadge && (
         <span
           aria-hidden="true"

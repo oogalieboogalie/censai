@@ -68,6 +68,13 @@ export const WindowFrame = React.memo(({ win, onUpdate, onClose, onSelect, onDra
   const hasOpacity = win.opacity !== undefined && win.opacity < 1;
   const winHue = win.hue !== undefined ? win.hue : theme.hue;
 
+  const localAccentSoft = isDark
+    ? `oklch(0.32 0.08 ${winHue})`
+    : `oklch(0.92 0.04 ${winHue})`;
+  const localAccentInk = isDark
+    ? `oklch(0.88 0.07 ${winHue})`
+    : `oklch(0.32 0.08 ${winHue})`;
+
   const customizedBg = win.hue !== undefined || win.opacity !== undefined
     ? (isDark
         ? `oklch(0.22 0.02 ${winHue} / ${win.opacity ?? 0.85})`
@@ -91,7 +98,13 @@ export const WindowFrame = React.memo(({ win, onUpdate, onClose, onSelect, onDra
         WebkitBackdropFilter: customizedBackdrop,
         transition: 'box-shadow 0.2s, border-color 0.2s, background 0.2s, backdrop-filter 0.2s',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        '--window-accent': accentBorder,
+        '--window-hue': winHue,
+        '--accent': accentBorder,
+        '--accent-soft': localAccentSoft,
+        '--accent-ink': localAccentInk,
       }}>
+
       <span aria-hidden="true" key="header-strip" style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 'var(--window-strip-height, 0px)', background: 'var(--window-strip-bg, transparent)', zIndex: 3, pointerEvents: 'none' }} />
       <div onPointerDown={startDrag} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
         key="drag-handle"

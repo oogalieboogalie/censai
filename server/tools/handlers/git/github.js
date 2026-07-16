@@ -14,7 +14,9 @@ export async function githubWriteFile(args) {
   try {
     const fileInfo = await fetchGithub(`/repos/${args.repo}/contents/${args.path}`);
     if (fileInfo && fileInfo.sha) sha = fileInfo.sha;
-  } catch (e) {}
+  } catch (e) {
+    // intentional: 404 means the file is new, so we PUT without an existing sha to create it.
+  }
 
   const body = {
     message: args.message,

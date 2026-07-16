@@ -1,4 +1,5 @@
 import React from 'react';
+import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
 
 export function useOverseer() {
   const [status, setStatus] = React.useState({
@@ -64,10 +65,7 @@ export function useOverseer() {
     pollStatus();
   }, []);
 
-  React.useEffect(() => {
-    const timer = setInterval(pollStatus, 1000);
-    return () => clearInterval(timer);
-  }, [pollStatus]);
+  useVisibilityAwareInterval(pollStatus, 1000);
 
   React.useEffect(() => {
     if (logEndRef.current) {

@@ -1,42 +1,35 @@
-import { sovereignTestRouter } from '../sovereignTest.js';
-import { calendarRouter } from '../calendar.js';
-import { sheetsRouter } from '../sheets.js';
-import { youtubeRouter } from '../youtube.js';
-import { contextRouter } from '../routes/context.js';
+/**
+ * routers.js — Express app-level mount glue.
+ *
+ * Owns the bootstrap concerns that don't belong in the data-driven
+ * ROUTE_MOUNTS table:
+ *   1. /api/auth router — mounted BEFORE the auth-guard so login itself is
+ *      reachable. Without this, the auth-guard would block the very endpoint
+ *      that establishes the session.
+ *   2. The auth-guard middleware (`/api/*` session check).
+ *   3. /api/health and /api/ready probe endpoints.
+ *
+ * Everything else (every other router mount, the consolidated window-import
+ * guard chain, etc.) lives in routeMap.js — see ROUTE_MOUNTS there. Keeping
+ * the mount table declarative means a maintainer can see the full routing
+ * surface in one place and cannot accidentally split a guard chain from its
+ * terminal router.
+ */
+
+import { mountRoutes } from './routeMap.js';
 import { authRouter } from '../routes/auth.js';
-import { filesRouter } from '../routes/files/index.js';
-import { projectsRouter } from '../routes/projects/index.js';
-import { githubRouter } from '../routes/github/index.js';
-import { chatRouter } from '../routes/chat/index.js';
-import { imagesRouter } from '../routes/images/index.js';
-import { agentsRouter } from '../routes/agents/index.js';
-import { localDevRouter } from '../routes/localDev.js';
-import { mailcowRouter } from '../routes/mailcow.js';
-import { providersRouter } from '../routes/providers.js';
-import { windowSdkRouter } from '../routes/windowSdk.js';
-import { julesRouter } from '../routes/jules.js';
-import { schedulesRouter } from '../routes/schedules.js';
-import { overseerRouter } from '../routes/overseer.js';
-import { vexRouter } from '../routes/vex/index.js';
-import { containersRouter } from '../routes/containers.js';
-import { automationRouter } from '../routes/automation.js';
-import { kubernetesRouter } from '../routes/kubernetes.js';
-import { sandboxRouter } from '../routes/sandbox.js';
-import { windowImportRouter } from '../routes/windowImport.js';
-import { operationalIntelligenceRouter } from '../routes/operationalIntelligence.js';
-import { commandsRouter } from '../routes/commands.js';
-import { keysRouter } from '../routes/keys.js';
 import { getSystemStatus } from '../health.js';
 import { runnerClient } from '../runner/client.js';
-import {
-  requireFeatureFlag,
-  requireLocalFilesystem,
-} from '../middleware/runtimeMode.js';
 
 export function mountRouters(app) {
+  // Pre-guard: /api/auth is the one mount that MUST come before the guard
+  // so the login flow can populate req.session.userId. Kept inline because
+  // it is bootstrap, not data.
   app.use('/api/auth', authRouter);
 
-  // Authentication guard for all other API endpoints
+  // Authentication guard for all other API endpoints. Express matches in
+  // declaration order, so every subsequent `app.use('/api/...')` mount
+  // (including all entries from ROUTE_MOUNTS) sees this guard.
   app.use('/api', (req, res, next) => {
     if (req.path === '/health' || req.path === '/ready') {
       return next();
@@ -53,38 +46,9 @@ export function mountRouters(app) {
     next();
   });
 
-  app.use('/api/sovereignTest', sovereignTestRouter);
-  app.use('/api/calendar', calendarRouter);
-  app.use('/api/sheets', sheetsRouter);
-  app.use('/api/youtube', youtubeRouter);
-  app.use('/api', contextRouter);
-  app.use('/api/github', githubRouter);
-  app.use('/api', projectsRouter);
-  app.use('/api', filesRouter);
-  app.use('/api', keysRouter);
-  app.use('/api', chatRouter);
-  app.use('/api/images', imagesRouter);
-  app.use('/api', agentsRouter);
-  app.use('/api', localDevRouter);
-  app.use('/api/mailcow', mailcowRouter);
-  app.use('/api/providers', providersRouter);
-  app.use('/api', windowSdkRouter);
-  app.use('/api', julesRouter);
-  app.use('/api', schedulesRouter);
-  app.use('/api', overseerRouter);
-  app.use('/api/vex', vexRouter);
-  app.use('/api', containersRouter);
-  app.use('/api', kubernetesRouter);
-  app.use('/api/automation', automationRouter);
-  app.use('/api', sandboxRouter);
-  app.use(
-    '/api/windows',
-    requireLocalFilesystem,
-    requireFeatureFlag('window-import')
-  );
-  app.use('/api', windowImportRouter);
-  app.use('/api', commandsRouter);
-  app.use('/api/operational-intelligence', operationalIntelligenceRouter);
+  // Data-driven mounts: every other router + the consolidated
+  // /api/windows guard chain (see ROUTE_MOUNTS in routeMap.js).
+  mountRoutes(app);
 
   app.get('/api/health', async (_req, res) => {
     const status = await getSystemStatus();

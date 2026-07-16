@@ -3,16 +3,16 @@ import { useWorkspaceStore } from '../lib/store.js';
 import { Canvas } from '../components/Canvas.jsx';
 import { Chrome } from '../components/Chrome.jsx';
 import { MultiGroupDock, DEFAULT_GROUPS } from '../components/Dock.jsx';
-import { ThemePanel } from '../components/Theme.jsx';
+
 import { Icon } from '../components/Icons.jsx';
-import { addAgent, getAgentById, updateAgent, initializeAgents } from '../lib/agentStore.js';
 import { inferLayout, cleanLayout, fitGroupToLayout, getGroupInnerBounds, makeGroupBoundsForWindows } from '../lib/layoutAlgo.js';
 import { MIN_ZOOM, computeFitView, clusterWindows, boundsForItems, computeFitBounds } from '../lib/canvasMath.js';
 import { api } from '../lib/api.js';
 import { getCanvasObjectType, legacyKindForCanvasType } from '../lib/canvasObjectTypes.js';
 import { DEFAULT_WINDOW_SIZES, getDefaultWindowSize } from '../lib/windowManifest.js';
 import { createLogger } from '../lib/logger.js';
-import { withTimeout, withoutUnsupportedWindows, randomDropSpot, DEFAULT_HTML_PREVIEW } from '../lib/appUtils.js';
+import { withoutUnsupportedWindows, randomDropSpot, DEFAULT_HTML_PREVIEW } from '../lib/appUtils.js';
+import { applyAllowListToInitial } from '../lib/workspace/allowList.js';
 import {
   getChromeWindowControlState,
   runChromeCloseAction,
@@ -23,6 +23,7 @@ import {
 import { Toolbar } from './Toolbar.jsx';
 import { Hud } from './Hud.jsx';
 import { useAppActions } from './hooks/useAppActions.js';
+import { useAppBootstrap } from './hooks/useAppBootstrap.js';
 import { useAppPresets } from './hooks/useAppPresets.js';
 import { useWorkspaceHistory } from './hooks/useWorkspaceHistory.js';
 import { Login } from '../components/Login.jsx';
@@ -32,69 +33,9 @@ import { shouldShowSovereignAccessGate } from '../lib/sovereignAccess.js';
 const log = createLogger('canvas');
 
 export function AppContent() {
-  const [initial, setInitial] = React.useState(null);
-  const [dataLoading, setDataLoading] = React.useState(true);
-  const [isInitialized, setIsInitialized] = React.useState(false);
-  const [session, setSession] = React.useState({ authenticated: false, oauthConfigured: false });
-  const [sessionChecking, setSessionChecking] = React.useState(true);
+  const { initial, dataLoading, isInitialized, session, sessionChecking } = useAppBootstrap();
   const [sovereignUnlocked, setSovereignUnlocked] = React.useState(false);
   const unlockSovereignAccess = React.useCallback(() => setSovereignUnlocked(true), []);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      setSessionChecking(true);
-      setDataLoading(true);
-      setIsInitialized(false);
-
-      let currentSess = { authenticated: false, oauthConfigured: false };
-      try {
-        currentSess = await api.getSession();
-        if (cancelled) return;
-        setSession(currentSess);
-      } catch (err) {
-        console.error("Failed to get session status", err);
-      } finally {
-        if (!cancelled) setSessionChecking(false);
-      }
-
-      if (!currentSess.authenticated) {
-        if (!cancelled) setDataLoading(false);
-        return;
-      }
-
-      initializeAgents().catch((err) => {
-        console.error("Failed to initialize agents from database", err);
-      });
-
-      try {
-        const [res, project] = await Promise.all([
-          withTimeout(api.getWorkspace(), 1200, 'Workspace load').catch(() => null),
-          withTimeout(api.getCurrentProject(), 1200, 'Current project load').catch(() => null),
-        ]);
-        if (cancelled) return;
-        if (res?.extraAgents?.length) {
-          res.extraAgents.forEach(a => {
-            if (!getAgentById(a.id)) {
-              addAgent(a);
-            } else {
-              updateAgent(a);
-            }
-          });
-        }
-        setInitial(res || {});
-        setCurrentProject(project);
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Failed to load workspace from API", err);
-        setInitial({});
-      } finally {
-        if (!cancelled) setDataLoading(false);
-      }
-    };
-    init();
-    return () => { cancelled = true; };
-  }, []);
 
   const {
     wins, setWins,
@@ -109,7 +50,6 @@ export function AppContent() {
     selectedIds, setSelectedIds,
     dockOffset, setDockOffset,
     groups, setGroups,
-    settingsOpen, setSettingsOpen,
     focusMode, setFocusMode,
     extraAgents, setExtraAgents,
     currentProject, setCurrentProject,
@@ -118,6 +58,7 @@ export function AppContent() {
     zoom, setZoom,
     presets, setPresets,
     sidebarFavorites, setSidebarFavorites,
+    windowAllowList, setWindowAllowList,
     // Store named actions
     createLink, deleteLink,
     fitView, jumpToNearestCluster,
@@ -128,7 +69,10 @@ export function AppContent() {
 
   React.useEffect(() => {
     if (initial && !dataLoading && !isInitialized) {
-      const safeWins = withoutUnsupportedWindows(initial.wins || []);
+      // Brief B1 — apply migrated window allow-list (single helper).
+      const { wins: gatedWins, windowAllowList: appliedAllowList } = applyAllowListToInitial(initial, windowAllowList);
+      setWindowAllowList(appliedAllowList);
+      const safeWins = withoutUnsupportedWindows(gatedWins);
       setWins(safeWins);
       setCanvasGroups(initial.canvasGroups || []);
       setPaths(initial.paths || []);
@@ -144,11 +88,12 @@ export function AppContent() {
       const fit = computeFitView(safeWins, initial.canvasGroups || []);
       setPan({ x: fit.x, y: fit.y });
       setZoom(fit.zoom);
-
+      // Brief B2 — auto-launch the marketplace when the user has zero enabled windows (the marketplace itself is always allowed, so this only fires for fully-empty workspaces).
+      if (appliedAllowList && !Object.values(appliedAllowList).some(Boolean)) setTimeout(() => spawnAt('marketplace'), 0);
       const id = requestAnimationFrame(() => setIsInitialized(true));
       return () => cancelAnimationFrame(id);
     }
-  }, [initial, dataLoading, isInitialized]);
+  }, [initial, dataLoading, isInitialized, spawnAt]);
 
   const onPanZoom = React.useCallback(({ panX, panY, zoom: z }) => {
     setPan({ x: panX, y: panY });
@@ -187,14 +132,13 @@ export function AppContent() {
     if (!isInitialized) return;
     if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
-      // Pan/zoom intentionally not persisted — we always fit-to-content on load.
-      const state = { workspaceId, wins: withoutUnsupportedWindows(wins), canvasGroups, dockOffset, groups, focusMode, paths, links, extraAgents, penColor, penSize, penMode, sidebarFavorites };
-      api.saveWorkspace(state);
+      // Pan/zoom intentionally not persisted — we always fit-to-content on load. Brief B1 — windowAllowList persisted so opt-in choices survive reload.
+      api.saveWorkspace({ workspaceId, wins: withoutUnsupportedWindows(wins), canvasGroups, dockOffset, groups, focusMode, paths, links, extraAgents, penColor, penSize, penMode, sidebarFavorites, windowAllowList });
     }, 1000);
     return () => {
       if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     };
-  }, [workspaceId, wins, canvasGroups, paths, links, groups, dockOffset, focusMode, extraAgents, penColor, penSize, penMode, sidebarFavorites, isInitialized]);
+  }, [workspaceId, wins, canvasGroups, paths, links, groups, dockOffset, focusMode, extraAgents, penColor, penSize, penMode, sidebarFavorites, windowAllowList, isInitialized]);
 
   // ─── Presets: named snapshots of the workspace the user can save and restore ───
   React.useEffect(() => {
@@ -214,11 +158,41 @@ export function AppContent() {
       if (meta && e.key.toLowerCase() === 'n') { e.preventDefault(); onNewAgent(); }
       else if (meta && e.key.toLowerCase() === 'w') { e.preventDefault(); onNewWindow(); }
       else if (meta && e.key.toLowerCase() === 'f') { e.preventDefault(); setFocusMode(f => !f); }
-      else if (e.key === 'Escape') { setSettingsOpen(false); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onNewAgent, onNewWindow, redo, setFocusMode, setSettingsOpen, undo]);
+  }, [onNewAgent, onNewWindow, redo, setFocusMode, undo]);
+
+  React.useEffect(() => {
+    const handlePaste = (e) => {
+      const editing = ['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.contentEditable === 'true';
+      if (editing) return;
+
+      const text = e.clipboardData?.getData('text');
+      if (!text) return;
+
+      e.preventDefault();
+
+      // Simple heuristic: if it has common programming language keywords, brackets, etc.
+      // or HTML-like tags, treat it as code.
+      const startsLikeCode = /^\s*(?:import|export|const|let|var|function|class|def|public|private|package|using|#include)\b/m.test(text);
+      const isCode = startsLikeCode || /[{}]|<\/?[a-z][\s\S]*>/i.test(text);
+
+      if (isCode) {
+        spawnAt('code_editor', {
+          title: 'Pasted Code',
+          code: text,
+        });
+      } else {
+        spawnAt('doc', {
+          fileName: 'Pasted Note.md',
+          text: text,
+        });
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [spawnAt]);
 
   if (sessionChecking) {
     return <div style={{ position: 'fixed', inset: 0, background: 'var(--canvas)', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Authenticating...</div>;
@@ -280,7 +254,14 @@ export function AppContent() {
         onToggleFocus={() => setFocusMode(f => !f)} focusMode={focusMode}
         penMode={penMode}
         onTogglePenMode={() => setPenMode(p => !p)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => {
+          const existing = wins.find(w => w.kind === 'appearance');
+          if (existing) {
+            setActiveId(existing.id);
+          } else {
+            spawnAt('appearance');
+          }
+        }}
         presets={presets}
         onSaveAsPreset={saveAsPreset}
         onLoadPreset={loadPreset}
@@ -299,12 +280,7 @@ export function AppContent() {
         groups={groups} onGroupsChange={setGroups} focusMode={focusMode}
         onDragAgent={onDragAgent} dockOffset={dockOffset} onMoveDock={setDockOffset}
       />
-      <ThemePanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchor={{ top: 56, right: 18 }}
-        focusMode={focusMode} setFocusMode={setFocusMode}
-        penMode={penMode} setPenMode={setPenMode}
-        onResetWorkspace={() => { if (confirm('Clear all windows + designed agents?')) { api.resetWorkspace().finally(() => location.reload()); } }}
-        onLogout={async () => { if (confirm('Log out from Censai?')) { await api.logout(); window.location.reload(); } }}
-      />
+
       <Hud focusMode={focusMode} />
       <Toolbar
         activeTool={activeTool} onSelectTool={setActiveTool}

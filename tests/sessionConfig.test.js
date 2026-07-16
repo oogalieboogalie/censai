@@ -9,10 +9,10 @@ describe('session cookie configuration', () => {
     });
   });
 
-  test('uses cross-site-safe secure cookies behind HTTPS proxies', () => {
+  test('keeps secure HTTPS cookies same-site to reduce CSRF exposure', () => {
     expect(getSessionCookieOptions('https://app.example.com')).toMatchObject({
       secure: true,
-      sameSite: 'none',
+      sameSite: 'lax',
       httpOnly: true,
     });
   });

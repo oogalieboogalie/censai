@@ -1,22 +1,22 @@
 import React from 'react';
 import { api } from '../../lib/api.js';
+import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
 
 export function useAgentActivity(agentId) {
   const [activity, setActivity] = React.useState({ wakeups: [], unread: 0 });
 
-  React.useEffect(() => {
-    if (!agentId) return undefined;
-    let alive = true;
-    const load = () => api.getAgentActivity(agentId)
-      .then(data => { if (alive) setActivity(data); })
+  const load = React.useCallback(() => {
+    if (!agentId) return;
+    api.getAgentActivity(agentId)
+      .then(data => setActivity(data))
       .catch(() => {});
-    load();
-    const timer = setInterval(load, 3000);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
   }, [agentId]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  useVisibilityAwareInterval(load, agentId ? 3000 : null);
 
   const active = activity.wakeups?.find(wake =>
     ['queued', 'in_progress', 'waiting_children'].includes(wake.status)

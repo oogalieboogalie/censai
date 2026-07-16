@@ -2,6 +2,7 @@ import React from 'react';
 import { api } from '../../lib/api.js';
 import { useWorkspaceStore } from '../../lib/store.js';
 import { normalizeTodos } from './TodosData.js';
+import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
 
 const POLL_INTERVAL_MS = 10_000;
 const IN_FLIGHT_STATUSES = new Set(['queued', 'dispatched', 'pr_open', 'blocked']);
@@ -15,7 +16,6 @@ export function useOperationalTodos(win, onUpdate, localItems) {
   const [enabled, setEnabled] = React.useState(Boolean(win.artifactId));
   const [error, setError] = React.useState('');
   const openedRef = React.useRef(null);
-  const pollRef = React.useRef(null);
   const itemsRef = React.useRef(localItems);
   itemsRef.current = localItems;
 
@@ -74,15 +74,8 @@ export function useOperationalTodos(win, onUpdate, localItems) {
   }, [enabled, workspaceId, win.artifactId, onUpdate]);
 
   // --- Poll every 10s when items are in-flight ---
-  React.useEffect(() => {
-    if (!enabled || !win.artifactId) return;
-    if (!hasInflightItems(itemsRef.current)) {
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      return;
-    }
-    pollRef.current = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [enabled, win.artifactId, refresh, localItems]);
+  const shouldPoll = enabled && Boolean(win.artifactId) && hasInflightItems(localItems);
+  useVisibilityAwareInterval(refresh, shouldPoll ? POLL_INTERVAL_MS : null);
 
   // --- Immediate refresh on tasks-updated event ---
   React.useEffect(() => {

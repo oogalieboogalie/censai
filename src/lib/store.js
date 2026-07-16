@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DEFAULT_GROUPS } from '../components/Dock.jsx';
+import { DEFAULT_GROUPS } from './dockDefaults.js';
 import { addAgent } from './agentStore.js';
 import { getCanvasObjectType, legacyKindForCanvasType, canvasObjectToLegacyWindow } from './canvasObjectTypes.js';
 import { getDefaultWindowSize } from './windowManifest.js';
@@ -48,9 +48,6 @@ export const useWorkspaceStore = create((set, get) => ({
   groups: DEFAULT_GROUPS,
   setGroups: (groups) => set({ groups: typeof groups === 'function' ? groups(get().groups) : groups }),
 
-  settingsOpen: false,
-  setSettingsOpen: (open) => set({ settingsOpen: open }),
-
   focusMode: false,
   setFocusMode: (mode) => set({ focusMode: mode }),
 
@@ -75,6 +72,27 @@ export const useWorkspaceStore = create((set, get) => ({
   sidebarFavorites: [],
   setSidebarFavorites: (favorites) => set({ sidebarFavorites: typeof favorites === 'function' ? favorites(get().sidebarFavorites) : favorites }),
 
+  // Brief B1 — window allow-list. The state shape that lets new users land
+  // on an empty canvas (windows off by default) and choose which to enable
+  // from the marketplace (B2). The migration runs in useAppBootstrap on
+  // workspace load; this slot just stores the result.
+  windowAllowList: {},
+  setWindowAllowList: (allowList) => set({
+    windowAllowList: typeof allowList === 'function' ? allowList(get().windowAllowList) : allowList,
+  }),
+  // Convenience action: set a single kind's flag without rebuilding the map.
+  setWindowAllowed: (kind, allowed) => set((state) => ({
+    windowAllowList: { ...(state.windowAllowList || {}), [kind]: Boolean(allowed) },
+  })),
+
+  // Brief B3 — dock visibility state. Default hidden (visible: false).
+  // Shape: { visible: boolean, groupOverrides: { [groupId]: { visible, agentOverrides } } }.
+  // See src/components/dock/useDockVisibility.js for setters / derivation.
+  dock: { visible: false, groupOverrides: {} },
+  setDock: (dock) => set({
+    dock: typeof dock === 'function' ? dock(get().dock) : dock,
+  }),
+
   // Named Actions for Canvas and Windows (Step 1 Multiplayer Canvas Roadmap)
   spawnAt: (kind, props = {}, pos = null, size = null) => {
     const id = crypto.randomUUID();
@@ -84,6 +102,14 @@ export const useWorkspaceStore = create((set, get) => ({
     const p = pos || randomDropSpot(sz, get().pan, get().zoom);
     const now = new Date().toISOString();
     
+    const defaultStylesByKind = {
+      terminal: { opacity: 0.85 },
+      code_editor: { opacity: 0.85 },
+      githubConsole: { opacity: 0.90 }
+    };
+    const targetKind = legacyKind || type;
+    const defaultStyles = defaultStylesByKind[targetKind] || {};
+
     const win = canvasObjectToLegacyWindow({
       id,
       type,
@@ -102,6 +128,7 @@ export const useWorkspaceStore = create((set, get) => ({
       lockedBy: null,
       createdAt: now,
       updatedAt: now,
+      ...defaultStyles,
       ...props,
     });
 

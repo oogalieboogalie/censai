@@ -37,7 +37,7 @@ export async function requireWorkspaceMember(db, {
 
 export async function ensureUserDefaultWorkspace(db, userId) {
   const existing = await db.query(
-    `SELECT w.id, w.name, wm.role
+    `SELECT w.id, w.name, w.tenant_id, wm.role
        FROM workspaces w
        JOIN workspace_members wm ON wm.workspace_id = w.id
        LEFT JOIN workspace_client_state wcs
@@ -47,7 +47,7 @@ export async function ensureUserDefaultWorkspace(db, userId) {
       LIMIT 1`,
     [userId]
   );
-  if (existing.rows[0]) return existing.rows[0];
+  if (existing.rows[0]) return attachTenantId(existing.rows[0], existing.rows[0].tenant_id);
   return createOwnedWorkspace(db, {
     userId,
     workspaceId: defaultWorkspaceId(userId),
@@ -62,11 +62,12 @@ export async function resolveWorkspaceContext(db, {
 }) {
   if (!workspaceId) return ensureUserDefaultWorkspace(db, userId);
   const existing = await db.query(
-    'SELECT id FROM workspaces WHERE id = $1',
+    'SELECT id, tenant_id FROM workspaces WHERE id = $1',
     [workspaceId]
   );
   if (existing.rows[0]) {
-    return requireWorkspaceMember(db, { userId, workspaceId });
+    const context = await requireWorkspaceMember(db, { userId, workspaceId });
+    return attachTenantId(context, existing.rows[0].tenant_id);
   }
   if (!createIfMissing) {
     const error = new Error('Workspace not found');
@@ -74,6 +75,12 @@ export async function resolveWorkspaceContext(db, {
     throw error;
   }
   return createOwnedWorkspace(db, { userId, workspaceId, name: 'Workspace' });
+}
+
+// Existing rows may not have a tenant_id yet; default to null so callers always
+// see the same shape. The brief guarantees the column is nullable + idempotent.
+function attachTenantId(context, tenantId) {
+  return { ...context, tenantId: tenantId ?? null };
 }
 
 async function createOwnedWorkspace(db, { userId, workspaceId, name }) {
@@ -85,7 +92,8 @@ async function createOwnedWorkspace(db, { userId, workspaceId, name }) {
     [workspaceId, name, userId]
   );
   if (!created.rows[0]) {
-    return requireWorkspaceMember(db, { userId, workspaceId });
+    const context = await requireWorkspaceMember(db, { userId, workspaceId });
+    return attachTenantId(context, null);
   }
   await db.query(
     `INSERT INTO workspace_members (workspace_id, user_id, role)
@@ -93,5 +101,6 @@ async function createOwnedWorkspace(db, { userId, workspaceId, name }) {
      ON CONFLICT (workspace_id, user_id) DO NOTHING`,
     [workspaceId, userId]
   );
-  return requireWorkspaceMember(db, { userId, workspaceId });
+  const context = await requireWorkspaceMember(db, { userId, workspaceId });
+  return attachTenantId(context, null);
 }

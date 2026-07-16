@@ -1,6 +1,6 @@
 import React from 'react';
 import { MAX_ZOOM, MIN_ZOOM, distance, getPanAfterZoom, screenToCanvas } from '../../lib/canvasMath.js';
-import { snapStrokeToRectangle, windowsInSelection } from './CanvasInteractions.js';
+import { windowsInSelection } from './CanvasInteractions.js';
 
 export function shouldStartCanvasPan(button, keyboardHeld, panMode = 'both') {
   return (['both', 'middle'].includes(panMode) && button === 1)
@@ -204,7 +204,7 @@ export function useCanvasPointer({
     if (d?.isDrawing) {
       if (currentPath && currentPath.length > 1) {
         const avgPressure = currentPath.reduce((sum, pt) => sum + (pt.p || 1), 0) / currentPath.length;
-        const snappedPath = snapStrokeToRectangle(currentPath) || currentPath;
+        const snappedPath = currentPath;
         setPaths(prev => [...prev, { id: crypto.randomUUID(), pts: snappedPath, color: penColor, size: penSize * Math.max(0.35, avgPressure) }]);
       }
       setCurrentPath(null);

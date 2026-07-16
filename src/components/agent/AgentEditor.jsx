@@ -1,12 +1,14 @@
 import React from 'react';
 import { PillBtn } from './AgentStats.jsx';
 import { modelOptionsFor, defaultModelForProvider } from './AgentData.js';
+import { AgentIconPicker } from './AgentIconPicker.jsx';
 
-export function AgentEditor({ 
-  agent, draft, setDraft, draftProvider, setDraftProvider, 
+export function AgentEditor({
+  agent, draft, setDraft, draftProvider, setDraftProvider,
   draftModel, setDraftModel, draftTools, setDraftTools,
+  draftIconRef, setDraftIconRef,
   toolCatalog, toolSearch, setToolSearch, saveStatus,
-  onSave, onCancel, textRef 
+  onSave, onCancel, textRef
 }) {
   const toggleTool = (toolName) => {
     setDraftTools(prev => prev.includes(toolName) ? prev.filter(name => name !== toolName) : [...prev, toolName]);
@@ -37,6 +39,12 @@ export function AgentEditor({
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
+      </div>
+      {/* Brief C2 — Icon section. New draftIconRef / setDraftIconRef props so
+          the parent can persist the chosen icon (string id or inline SVG) into
+          the agent record. */}
+      <div style={{ padding: '6px 8px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--hairline)' }}>
+        <AgentIconPicker value={draftIconRef} onChange={setDraftIconRef} />
       </div>
       <input value={draftModel} onChange={e => setDraftModel(e.target.value)} placeholder="Custom model tag" style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: `1px solid oklch(0.62 0.14 ${agent.hue} / 0.55)`, background: 'var(--surface-2)', color: 'var(--ink)', fontSize: 12, outline: 'none' }} />
       <textarea ref={textRef} value={draft} onChange={e => setDraft(e.target.value)}

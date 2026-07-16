@@ -7,6 +7,7 @@ import { startAgentWakeupWorker } from '../agent-wakeups/worker.js';
 import { checkDb } from './database.js';
 import { tickJulesWatcher } from './julesWatcher.js';
 import { attachTerminalServer } from '../terminal/index.js';
+import { attachAgentRegistryWs } from '../ws/agentRegistry.js';
 import { initializeDynamicTools, initializeMcpTools, shutdownMcpTools } from '../tools.js';
 
 const log = createLogger('server-lifecycle');
@@ -37,6 +38,7 @@ export async function startServer(app, options = {}) {
       });
 
       attachTerminalServer(server);
+      attachAgentRegistryWs(server, { sessionStore: app.get('sessionStore') });
 
       if (shouldStartWorkers) {
         startLogCleanup();

@@ -9,14 +9,18 @@ import {
   WINDOW_MANIFEST_BY_KIND,
   MODULE_MANIFESTS_BY_TYPE,
   LAUNCHER_MANIFESTS,
-  INTEGRATION_WINDOW_MANIFESTS,
   getModuleType,
   DEFAULT_MODULE_TYPE,
   MODULE_TYPES,
+  WINDOW_MANIFEST_VERSION,
 } from '../src/lib/windowManifest.js';
 import { DEFAULT_MODE_AVAILABILITY, normalizeWindowMeta, deriveManifestEntry } from '../src/lib/windowMeta.js';
 
 describe('WINDOW_REGISTRY is derived from the manifest', () => {
+  test('manifest version marks module registry v2 metadata', () => {
+    expect(WINDOW_MANIFEST_VERSION).toBe(2);
+  });
+
   test('default window gets default runtime metadata', () => {
     const chat = WINDOW_REGISTRY.chat;
     expect(chat.componentKey).toBe('ChatWindow');
@@ -26,11 +30,17 @@ describe('WINDOW_REGISTRY is derived from the manifest', () => {
     expect(chat.persistence).toBe('workspace');
     expect(chat.entitlement).toBe('windows.chat'); // default: windows.<kind>
     expect(chat.modeAvailability).toEqual(DEFAULT_MODE_AVAILABILITY);
+    expect(chat.installScope).toBe('workspace');
+    expect(chat.runtimeAffinity).toBe('browser');
+    expect(chat.requiredCapabilities).toEqual([]);
+    expect(chat.sideEffects).toEqual([]);
+    expect(chat.artifactTypes).toEqual([]);
   });
 
   test('flat runtime overrides on the manifest entry are honored', () => {
     // files opts out of cloud + uses a custom entitlement/persistence
     expect(WINDOW_REGISTRY.files.persistence).toBe('local_only');
+    expect(WINDOW_REGISTRY.files.installScope).toBe('local_only');
     expect(WINDOW_REGISTRY.files.entitlement).toBe('local_filesystem.access');
     expect(WINDOW_REGISTRY.files.modeAvailability.cloud_saas).toBe(false);
     expect(WINDOW_REGISTRY.files.modeAvailability.local_desktop).toBe(true);
@@ -58,19 +68,16 @@ describe('module type discriminator', () => {
     expect(DEFAULT_MODULE_TYPE).toBe('window');
   });
 
-  test('providerConnect is typed as an integration', () => {
-    expect(getModuleType(WINDOW_MANIFEST_BY_KIND.providerConnect)).toBe('integration');
-  });
-
   test('every manifest groups under a known type', () => {
     const grouped = Object.values(MODULE_MANIFESTS_BY_TYPE).flat();
     expect(grouped.length).toBe(WINDOW_MANIFESTS.length);
     expect(Object.keys(MODULE_MANIFESTS_BY_TYPE).every((t) => MODULE_TYPES.includes(t))).toBe(true);
   });
 
-  test('integration-typed entries align with INTEGRATION_WINDOW_MANIFESTS', () => {
-    expect(INTEGRATION_WINDOW_MANIFESTS.some((m) => m.kind === 'providerConnect')).toBe(true);
-  });
+  // providerConnect was descoped (commented out in integrationWindows.js).
+  // The "providerConnect is typed as an integration" and "integration-typed
+  // entries align with INTEGRATION_WINDOW_MANIFESTS (providerConnect)" tests
+  // were removed; if the feature returns, re-add them.
 });
 
 describe('launcher tiles are derived and sorted', () => {

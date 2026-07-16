@@ -7,7 +7,7 @@ import {
   LocalEmptyState, GithubRepoList 
 } from './files/index.js';
 
-export function FilesWindow({ win, pan, zoom, onUpdate, onSpawn, currentProject }) {
+export function FilesWindow({ win, pan, zoom, onUpdate, onSpawn, currentProject, wins, onSelect }) {
   const {
     mode,
     tree,
@@ -67,11 +67,11 @@ export function FilesWindow({ win, pan, zoom, onUpdate, onSpawn, currentProject 
             {searchLoading && <div style={{ padding: 12, color: 'var(--ink-faint)', fontStyle: 'italic' }}>Searching...</div>}
             {!searchLoading && searchResults.length === 0 && <div style={{ padding: 12, color: 'var(--ink-faint)' }}>No matches.</div>}
             {!searchLoading && searchResults.map(node => (
-               <Tree key={node.path} node={node} depth={0} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={mode === 'github' ? win.githubRepo : null} mode={mode} rootDirPath={win.dirPath} />
+               <Tree key={node.path} node={node} depth={0} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={mode === 'github' ? win.githubRepo : null} mode={mode} rootDirPath={win.dirPath} wins={wins} onSelect={onSelect} />
             ))}
           </div>
         ) : (
-          tree && <Tree node={tree} depth={0} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={mode === 'github' ? win.githubRepo : null} mode={mode} rootDirPath={win.dirPath} />
+          tree && <Tree node={tree} depth={0} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={mode === 'github' ? win.githubRepo : null} mode={mode} rootDirPath={win.dirPath} wins={wins} onSelect={onSelect} />
         )}
 
         {(tree || searchResults) && (

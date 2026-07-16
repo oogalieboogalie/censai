@@ -57,6 +57,17 @@ CREATE INDEX IF NOT EXISTS idx_relationships_workspace_type ON relationships (wo
 CREATE UNIQUE INDEX IF NOT EXISTS idx_relationships_active_unique
   ON relationships (source_artifact_id, target_artifact_id, relationship_type)
   WHERE ended_at IS NULL;
+
+/**
+ * MLOps ARTIFACT TYPES:
+ * - ml_model_deployment: Represents a deployed model with its baseline distributions.
+ * - ml_drift_alert: Triggered when drift exceeds thresholds.
+ *
+ * MLOps EVENT TYPES:
+ * - ml.telemetry_ingested: Recorded when new inference data is processed.
+ * - ml.drift_detected: Recorded when a drift alert is created.
+ * - ml.retraining_triggered: Recorded when an automated or manual retraining starts.
+ */
 `;
 
 let ensured = false;

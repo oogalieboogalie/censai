@@ -10,10 +10,12 @@ module.exports = {
   ],
   transform: {
     '^.+\\.[jt]sx?$': ['babel-jest', { configFile: './babel.config.cjs' }],
+    '\\.svg(\\?raw)?$': '<rootDir>/tests/svgRawTransformer.cjs',
   },
   extensionsToTreatAsEsm: ['.jsx'],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/tests/styleMock.js',
+    '\\?raw$': '<rootDir>/tests/rawSvgLoader.cjs',
   },
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',

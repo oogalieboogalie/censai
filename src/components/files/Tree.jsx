@@ -1,8 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { fileWindowKind, fileWindowProps } from './fileRouting.js';
+import { useWorkspaceStore } from '../../lib/store.js';
 
-export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, githubRepo, mode, rootDirPath }) {
+export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, githubRepo, mode, rootDirPath, wins = [], onSelect }) {
+  const onUpdateWindow = useWorkspaceStore(s => s.onUpdate);
   const [open, setOpen] = React.useState(node.open ?? false);
   const [children, setChildren] = React.useState(node.children || null);
   const [loading, setLoading] = React.useState(false);
@@ -31,7 +33,26 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
     }
   }, [open, isDir, children, loading, mode, node.path, rootDirPath, githubRepo]);
 
-  const onClick = () => { if (isDir) setOpen(!open); else onSpawn?.(fileWindowKind(node.name), fileWindowProps(node, githubRepo)); };
+  const onClick = () => {
+    if (isDir) {
+      setOpen(!open);
+    } else {
+      const existingWin = (wins || []).find(
+        (w) => w.filePath === node.path && (githubRepo ? w.githubRepo === githubRepo : !w.isGithub)
+      );
+      if (existingWin) {
+        onSelect?.(existingWin.id);
+        if (existingWin.kind === 'doc' && !existingWin.isEditing) {
+          onUpdateWindow?.(existingWin.id, { isEditing: true });
+        }
+      } else {
+        onSpawn?.(fileWindowKind(node.name), {
+          ...fileWindowProps(node, githubRepo),
+          isEditing: true
+        });
+      }
+    }
+  };
 
   const handleDragOver = React.useCallback((e) => {
     if (!isDir) return;
@@ -108,7 +129,10 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
         const rect = document.getElementById('canvas-root')?.getBoundingClientRect() || { left: 0, top: 0 };
         const cx = (ev.clientX - rect.left - pan.x) / zoom - 180;
         const cy = (ev.clientY - rect.top - pan.y) / zoom - 60;
-        onSpawn?.(fileWindowKind(node.name), fileWindowProps(node, githubRepo), { x: cx, y: cy });
+        onSpawn?.(fileWindowKind(node.name), {
+          ...fileWindowProps(node, githubRepo),
+          isEditing: true
+        }, { x: cx, y: cy });
       }
       else onClick();
     };
@@ -127,7 +151,7 @@ export function Tree({ node, depth, pan = { x: 0, y: 0 }, zoom = 1, onSpawn, git
         <span>{dropping ? '⏳' : isDir ? (open ? '📂' : '📁') : '📄'} {node.name}</span>
       </div>
       {isDir && open && loading && <div style={{ paddingLeft: 10 + (depth+1) * 14, color: 'var(--ink-faint)', fontSize: 10, fontStyle: 'italic', padding: '4px 0 4px ' + (10 + (depth+1) * 14) + 'px' }}>Loading...</div>}
-      {isDir && open && children && children.map((c, i) => <Tree key={i} node={c} depth={depth + 1} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={githubRepo} mode={mode} rootDirPath={rootDirPath} />)}
+      {isDir && open && children && children.map((c, i) => <Tree key={i} node={c} depth={depth + 1} pan={pan} zoom={zoom} onSpawn={onSpawn} githubRepo={githubRepo} mode={mode} rootDirPath={rootDirPath} wins={wins} onSelect={onSelect} />)}
       {drag && createPortal(
         <div style={{ position: 'fixed', left: drag.x + 8, top: drag.y + 8, zIndex: 1000, pointerEvents: 'none', background: 'var(--surface)', border: '1px solid var(--hairline)', borderRadius: 8, padding: '6px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink)', boxShadow: '0 8px 20px oklch(0 0 0 / 0.18)' }}>{node.name}</div>,
         document.body

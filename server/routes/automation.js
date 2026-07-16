@@ -20,6 +20,7 @@ async function runPowerShell(command) {
     const { stdout } = await execAsync(`powershell.exe -NoProfile -NonInteractive -Command "${command}"`);
     return stdout;
   } catch (err) {
+    console.warn('[automation] powershell exec failed', { command: command.slice(0, 80), error: err.message });
     return null;
   }
 }
@@ -29,6 +30,7 @@ async function readJsonSafely(filepath) {
     const content = await fs.readFile(filepath, 'utf-8');
     return JSON.parse(content);
   } catch (err) {
+    console.warn('[automation] json read failed', { filepath, error: err.message });
     return null;
   }
 }
@@ -37,9 +39,14 @@ automationRouter.get('/status', requireLocalFilesystem, async (req, res) => {
   try {
     const isWindows = os.platform() === 'win32';
     const statusResult = {};
+    // Additive fields for the Automation Board UI: host (where the task runs) and
+    // currentStep (a free-text description of what the task is doing right now).
+    // Both default to null so older clients that ignore unknown keys keep working.
+    const host = os.hostname();
+    const baseExtras = { host, currentStep: null };
 
     for (const task of ALLOWED_TASKS) {
-      statusResult[task] = { armed: false, state: 'Unknown', lastRunTime: null, nextRunTime: null, lastTaskResult: null, pending: 0, dispatched: 0 };
+      statusResult[task] = { armed: false, state: 'Unknown', lastRunTime: null, nextRunTime: null, lastTaskResult: null, pending: 0, dispatched: 0, ...baseExtras };
     }
 
     if (isWindows) {
@@ -100,6 +107,12 @@ automationRouter.get('/status', requireLocalFilesystem, async (req, res) => {
     if (overseerData) {
       // Not mapping explicitly to pending/dispatched, but attach it to the task
       statusResult['CensaiOverseer'].metadata = overseerData;
+      // Surface a free-text "what is it doing" hint so the Automation Board UI
+      // can show it without needing to read the file itself. Additive — clients
+      // that don't know about `currentStep` simply ignore it.
+      if (overseerData.current && typeof overseerData.current === 'string') {
+        statusResult['CensaiOverseer'].currentStep = overseerData.current;
+      }
     }
 
     res.json(statusResult);

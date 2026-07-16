@@ -13,10 +13,6 @@ import {
 } from '../src/lib/windowIntegrationTypes.js';
 import {
   WINDOW_MANIFESTS,
-  INTEGRATION_WINDOW_MANIFESTS,
-  WINDOW_MANIFEST_BY_PROVIDER,
-  getWindowIntegration,
-  getWindowManifest,
 } from '../src/lib/windowManifest.js';
 
 // A minimal, valid integration block used as a baseline for negative tests.
@@ -173,22 +169,6 @@ describe('manifest integration wiring', () => {
     }
   });
 
-  test('the demo provider window is registered as an integration', () => {
-    const manifest = getWindowManifest('providerConnect');
-    expect(manifest).toBeTruthy();
-    expect(isIntegrationManifest(manifest)).toBe(true);
-    expect(INTEGRATION_WINDOW_MANIFESTS).toContain(manifest);
-    expect(WINDOW_MANIFEST_BY_PROVIDER['demo-provider']).toBe(manifest);
-  });
-
-  test('getWindowIntegration returns normalized metadata for provider windows and null otherwise', () => {
-    const integration = getWindowIntegration('providerConnect');
-    expect(integration).toBeTruthy();
-    expect(integration.provider.id).toBe('demo-provider');
-    expect(integration.authMode).toBe(AUTH_MODES.API_KEY);
-    // normalized: default status labels merged in
-    expect(integration.statusLabels.error).toBe(DEFAULT_STATUS_LABELS.error);
-    expect(getWindowIntegration('chat')).toBeNull();
-    expect(getWindowIntegration('does-not-exist')).toBeNull();
-  });
+  // providerConnect was descoped (commented out in integrationWindows.js).
+  // Tests for it were removed; if the feature returns, re-add them.
 });

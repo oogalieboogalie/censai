@@ -7,6 +7,24 @@
 
 export const FACTORY_WINDOW_MANIFESTS = [
   {
+    kind: 'marketplace',
+    canvasType: 'marketplace',
+    label: 'Marketplace',
+    componentName: 'MarketplaceWindow',
+    componentPath: 'src/components/MarketplaceWindow.jsx',
+    defaultSize: { w: 720, h: 520 },
+    moduleMenu: { show: true, order: 5, icon: 'ShoppingBag', label: 'Marketplace', hint: 'Toggle which windows appear on your canvas' },
+  },
+  {
+    kind: 'registry',
+    canvasType: 'registry',
+    label: 'Agent Registry',
+    componentName: 'RegistryWindow',
+    componentPath: 'src/components/RegistryWindow.jsx',
+    defaultSize: { w: 800, h: 560 },
+    moduleMenu: { show: true, order: 10, icon: 'Plug', label: 'Agent Registry', hint: 'Browse, install, publish agents' },
+  },
+  {
     kind: 'helloFactory',
     canvasType: 'helloFactory',
     label: 'Hello Factory',
@@ -35,6 +53,16 @@ export const FACTORY_WINDOW_MANIFESTS = [
     defaultSize: { w: 900, h: 600 },
     moduleMenu: { show: false, status: 'coming-soon' },
     lab: { title: 'Governance' },
+  },
+  {
+    kind: 'reliability',
+    canvasType: 'reliability',
+    label: 'Reliability',
+    componentName: 'ReliabilityWindow',
+    componentPath: 'src/components/ReliabilityWindow.jsx',
+    defaultSize: { w: 800, h: 600 },
+    moduleMenu: { show: true, order: 15, icon: 'Shield', label: 'Reliability', hint: 'AI Code Reliability Dashboard' },
+    lab: { title: 'Reliability' },
   },
   // window:sync inserts new windows above this line — do not remove.
 ];

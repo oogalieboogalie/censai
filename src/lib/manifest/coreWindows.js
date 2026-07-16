@@ -109,4 +109,13 @@ export const CORE_WINDOW_MANIFESTS = [
     componentPath: 'src/components/CalendarWindow.jsx',
     defaultSize: { w: 360, h: 360 },
   },
+  {
+    kind: 'appearance',
+    canvasType: 'appearance',
+    label: 'Appearance Settings',
+    componentName: 'AppearanceWindow',
+    componentPath: 'src/components/AppearanceWindow.jsx',
+    defaultSize: { w: 960, h: 580 },
+    launcher: { show: true, order: 60, icon: 'Gear', label: 'Appearance', hint: 'theme & settings' },
+  },
 ];

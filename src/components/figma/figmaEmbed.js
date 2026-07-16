@@ -54,7 +54,9 @@ export function figmaTitleFromUrl(url) {
     if (pathParts.length >= 4) {
       return decodeURIComponent(pathParts[3]).replace(/[-_]/g, ' ');
     }
-  } catch (e) {}
+  } catch (e) {
+    // intentional: invalid embed URLs fall through to the default title below.
+  }
   
   return 'Figma Design';
 }

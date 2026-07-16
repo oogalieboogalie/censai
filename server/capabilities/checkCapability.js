@@ -5,6 +5,10 @@ const ROLE_CAPABILITIES = Object.freeze({
     'workspace.write',
     'artifact.read',
     'artifact.write',
+    // P1-2: window.import is split into validate (dry-run, safe for users)
+    // and write (admin-only). Normal users can run validation/preview but
+    // cannot persist new windows to disk.
+    'window.import.validate',
   ]),
 });
 

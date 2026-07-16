@@ -181,4 +181,13 @@ export const OPS_WINDOW_MANIFESTS = [
     moduleMenu: { show: false, status: 'coming-soon' },
     launcher: { show: true, order: 180, icon: 'Search', label: 'Provenance', hint: 'trace AI code to prompt' },
   },
+  {
+    kind: 'mlops_dashboard',
+    canvasType: 'mlops_dashboard',
+    label: 'MLOps Dashboard',
+    componentName: 'MlopsDashboardWindow',
+    componentPath: 'src/components/MlopsDashboardWindow.jsx',
+    defaultSize: { w: 800, h: 600 },
+    launcher: { show: true, order: 190, icon: 'Activity', label: 'MLOps', hint: 'drift detection & retraining' },
+  },
 ];

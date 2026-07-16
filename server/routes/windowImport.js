@@ -14,38 +14,26 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { createLogger } from '../logger.js';
 import { callModel } from '../aiGateway/callModel.js';
+import { validateGeneratedWindow, windowComponentName } from '../window-import/validation.js';
 import {
-  slugifyWindowKind,
-  validateGeneratedWindow,
-  windowComponentName,
-} from '../window-import/validation.js';
+  buildWindowFilePlan,
+  normalizeWindowKind,
+  parseLlmJsonResponse,
+  runWindowSync,
+  writeWindowPackage,
+} from '../window-import/windowPackageWriter.js';
+import { CapabilityDeniedError, requireCapability } from '../capabilities/checkCapability.js';
+import { resourceRateLimiter } from '../middleware/standardRateLimits.js';
 
-const execFileAsync = promisify(execFile);
 const log = createLogger('window-import');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const WINDOWS_DIR = path.join(PROJECT_ROOT, 'src', 'components', 'windows');
 
 export const windowImportRouter = express.Router();
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-async function runSync() {
-  try {
-    const { stdout, stderr } = await execFileAsync(
-      process.execPath,
-      ['scripts/window-sync.mjs'],
-      { cwd: PROJECT_ROOT, timeout: 30_000 }
-    );
-    return { ok: true, output: stdout + stderr };
-  } catch (err) {
-    return { ok: false, output: err.stdout + err.stderr + err.message };
-  }
-}
+windowImportRouter.use(resourceRateLimiter);
 
 // ── The CensaiHub window conventions prompt ────────────────────────────────
 
@@ -100,12 +88,31 @@ Respond with EXACTLY this JSON structure (no markdown, raw JSON only):
  * 3. Run window:sync
  * 4. Return { ok, kind, label, syncOutput }
  */
-windowImportRouter.post('/windows/import', async (req, res) => {
+windowImportRouter.post('/import', async (req, res) => {
   const { rawJsx, rawCss = '', hint = '', launcher } = req.body;
   const dryRun = req.body?.dry_run === true || req.body?.dryRun === true;
 
   if (!rawJsx || rawJsx.trim().length < 20) {
     return res.status(400).json({ error: 'rawJsx is required and must contain actual code.' });
+  }
+
+  // P1-2 capability split: dry-run needs window.import.validate (user-OK),
+  // real writes need window.import.write (admin-only). Enforce at route-time
+  // so P1-1's routeMap refactor stays orthogonal — no mount-time changes.
+  try {
+    requireCapability(
+      dryRun ? 'window.import.validate' : 'window.import.write',
+      req.session || {}
+    );
+  } catch (err) {
+    if (err instanceof CapabilityDeniedError) {
+      return res.status(err.statusCode || 403).json({
+        ok: false,
+        code: err.code || 'CAPABILITY_DENIED',
+        error: err.message,
+      });
+    }
+    throw err;
   }
 
   try {
@@ -126,8 +133,7 @@ windowImportRouter.post('/windows/import', async (req, res) => {
     // Parse JSON from LLM response (strip any accidental markdown fences)
     let adapted;
     try {
-      const jsonStr = rawContent.replace(/^```(?:json)?\n?/m, '').replace(/```\s*$/m, '').trim();
-      adapted = JSON.parse(jsonStr);
+      adapted = parseLlmJsonResponse(rawContent);
     } catch {
       log.error('LLM returned non-JSON', { rawContent: rawContent.slice(0, 500) });
       return res.status(502).json({
@@ -136,26 +142,28 @@ windowImportRouter.post('/windows/import', async (req, res) => {
       });
     }
 
-    const kind  = slugifyWindowKind(adapted.kind || 'importedWindow');
-    const label = adapted.label || kind;
-    const size  = adapted.defaultSize || { w: 520, h: 480 };
-    const jsx   = adapted.jsx || '';
-    const css   = adapted.css || '';
+    const rawKind = adapted.kind || 'importedWindow';
+    const label = adapted.label || normalizeWindowKind(rawKind);
+    const size = adapted.defaultSize || { w: 520, h: 480 };
+    const jsx = adapted.jsx || '';
+    const css = adapted.css || '';
 
     if (!jsx) {
       return res.status(502).json({ error: 'LLM returned empty JSX. Try again.' });
     }
 
-    const componentName = windowComponentName(kind);
-    const cssFile = `${componentName}.css`;
-    const finalJsx = jsx.replace(
-      /import\s+['"][^'"]*\.css['"]/,
-      `import './${cssFile}'`
-    );
-    const validation = validateGeneratedWindow({
-      kind,
+    const filePlan = buildWindowFilePlan({
+      kind: rawKind,
       label,
-      rawJsx: finalJsx,
+      size,
+      jsx,
+      css,
+      launcher,
+    });
+    const validation = validateGeneratedWindow({
+      kind: filePlan.kind,
+      label,
+      rawJsx: filePlan.jsx,
       rawCss: css,
     });
     if (!validation.ok) {
@@ -169,46 +177,32 @@ windowImportRouter.post('/windows/import', async (req, res) => {
       return res.json({
         ok: true,
         dryRun: true,
-        kind,
+        kind: filePlan.kind,
         label,
-        componentName,
+        componentName: filePlan.componentName,
         defaultSize: size,
         validation,
       });
     }
 
     // ── Step 2: Write files ────────────────────────────────────────────────
-    const windowDir = path.join(WINDOWS_DIR, kind);
-    fs.mkdirSync(windowDir, { recursive: true });
-    fs.writeFileSync(path.join(windowDir, 'index.jsx'), finalJsx, 'utf8');
-    if (css) {
-      fs.writeFileSync(path.join(windowDir, cssFile), css, 'utf8');
-    }
+    writeWindowPackage(filePlan);
 
-    // Write meta.js so window:sync picks it up
-    const launcherBlock = launcher
-      ? `,\n  launcher: ${JSON.stringify(launcher)}`
-      : '';
-    const metaJs = `export const windowMeta = {
-  kind: '${kind}',
-  label: '${label}',
-  componentName: '${componentName}',
-  componentPath: 'src/components/windows/${kind}/index.jsx',
-  defaultSize: { w: ${size.w}, h: ${size.h} }${launcherBlock},
-};\n`;
-    fs.writeFileSync(path.join(windowDir, 'meta.js'), metaJs, 'utf8');
-
-    log.info('window files written', { kind, componentName, dir: windowDir });
+    log.info('window files written', {
+      kind: filePlan.kind,
+      componentName: filePlan.componentName,
+      dir: filePlan.windowDir,
+    });
 
     // ── Step 3: window:sync ────────────────────────────────────────────────
-    const syncResult = await runSync();
+    const syncResult = await runWindowSync();
     log.info('window:sync result', syncResult);
 
     res.json({
       ok: true,
-      kind,
+      kind: filePlan.kind,
       label,
-      componentName,
+      componentName: filePlan.componentName,
       syncOk: syncResult.ok,
       syncOutput: syncResult.output,
       message: syncResult.ok
@@ -225,8 +219,8 @@ windowImportRouter.post('/windows/import', async (req, res) => {
  * POST /api/windows/sync
  * Runs window:sync manually (e.g. after a manual folder drop).
  */
-windowImportRouter.post('/windows/sync', async (_req, res) => {
-  const result = await runSync();
+windowImportRouter.post('/sync', async (_req, res) => {
+  const result = await runWindowSync();
   res.json(result);
 });
 
@@ -234,7 +228,7 @@ windowImportRouter.post('/windows/sync', async (_req, res) => {
  * GET /api/windows/list-importable
  * Returns folder windows that have a meta.js but may not be synced yet.
  */
-windowImportRouter.get('/windows/list-importable', (_req, res) => {
+windowImportRouter.get('/list-importable', (_req, res) => {
   try {
     if (!fs.existsSync(WINDOWS_DIR)) return res.json({ windows: [] });
     const dirs = fs.readdirSync(WINDOWS_DIR, { withFileTypes: true })
