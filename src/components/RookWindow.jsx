@@ -3,8 +3,9 @@ import { Icon } from './Icons.jsx';
 import { WindowTitle } from './Windows.jsx';
 
 export function RookWindow({ win, onUpdate }) {
-  const token = "91bf3c8dfa4342913992b13460c47f600e932817cfbc739a";
-  const url = `http://localhost:18789/?token=${token}`;
+  // Authentication belongs to the local OpenClaw gateway, never in source or
+  // a shareable workspace payload. The gateway's own UI handles sign-in.
+  const url = 'http://localhost:18789/';
 
   const openConsole = () => {
     window.open(url, '_blank');
@@ -15,7 +16,7 @@ export function RookWindow({ win, onUpdate }) {
       <WindowTitle
         icon={<Icon.Bot size={13} style={{ color: 'oklch(0.62 0.14 180)', animation: 'gen-pulse 1.5s infinite ease-in-out' }} />}
         label={win.title || 'Rook (OpenClaw)'}
-        subtitle="Active WSL Sidecar"
+        subtitle="Local sidecar console"
       />
       <div style={{
         flex: 1,
@@ -66,7 +67,7 @@ export function RookWindow({ win, onUpdate }) {
             Rook (OpenClaw) Sidecar
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--ink-soft)', lineHeight: '1.5', marginBottom: '24px' }}>
-            Your autonomous WSL agent is active and running locally on port <code style={{ color: 'var(--accent)', background: 'var(--surface-2)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>18789</code>.
+            Open your local gateway on port <code style={{ color: 'var(--accent)', background: 'var(--surface-2)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>18789</code>. OpenClaw will handle authentication in its own console.
           </p>
 
           {/* Quick Metrics Grid */}
