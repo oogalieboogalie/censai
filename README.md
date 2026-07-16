@@ -61,21 +61,30 @@ ollama pull qwen3-coder:latest
 ollama pull nomic-embed-text
 ```
 
-### 3. Start the stack
+### 3. Create your local configuration
 ```bash
-docker compose up -d
+cp .env.example .env
+```
+
+### 4. Start the stack
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
 ```
 Open **http://localhost:3002** and start building.
+
+That command pulls the validated public image from GitHub Container Registry. To build the
+same release from its published source instead, run `docker compose up -d --build`.
+
+Every merge to `main` that passes CI creates an immutable `selfhost-<date>-<commit>` GitHub
+release and matching GHCR image. `latest` follows the newest validated release; the dated tag
+is the reproducible choice for production installs.
 
 ---
 
 ## Configuration
 
-To use cloud LLMs or external integrations (Google, GitHub, image generation, mailcow), copy the environment template and fill in your keys:
-
-```bash
-cp .env.example .env
-```
+Edit `.env` to add any cloud LLM or external-integration keys you choose to use. Local Ollama
+does not require a paid API key.
 
 See [SELF_HOSTING_GUIDE.md](SELF_HOSTING_GUIDE.md) for the full walkthrough and [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together. Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
