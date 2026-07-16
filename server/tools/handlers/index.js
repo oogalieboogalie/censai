@@ -25,6 +25,7 @@ import { handleMailcowTool } from './mailcow.js';
 import { handleVexTool } from './vex.js';
 import { handlePolicyTool } from './policy.js';
 import { handleToolDiscovery } from './discovery.js';
+import { handleReliabilityTool } from './reliability.js';
 
 
 export const TOOL_REGISTRY = {
@@ -162,4 +163,8 @@ export const TOOL_REGISTRY = {
   // Policy
   'policy_evaluate': handlePolicyTool,
   'policy_record_evidence': handlePolicyTool,
+
+  // Reliability
+  'scan_reliability': handleReliabilityTool,
+  'generate_tests': handleReliabilityTool,
 };

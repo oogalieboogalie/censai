@@ -83,4 +83,43 @@ describe('workspace-scoped client state', () => {
     })).rejects.toMatchObject({ statusCode: 403 });
     expect(db.query).toHaveBeenCalledTimes(2);
   });
+
+  test('resolveWorkspaceContext surfaces tenantId from a workspace row with tenant_id set', async () => {
+    const db = {
+      query: jest.fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'workspace-1', tenant_id: 'acme' }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'workspace-1', name: 'Workspace', role: 'owner' }],
+        }),
+    };
+
+    await expect(resolveWorkspaceContext(db, {
+      userId: 7,
+      workspaceId: 'workspace-1',
+    })).resolves.toEqual({
+      id: 'workspace-1',
+      name: 'Workspace',
+      role: 'owner',
+      tenantId: 'acme',
+    });
+  });
+
+  test('resolveWorkspaceContext defaults tenantId to null when the column is null', async () => {
+    const db = {
+      query: jest.fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'workspace-1', tenant_id: null }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'workspace-1', name: 'Workspace', role: 'owner' }],
+        }),
+    };
+
+    await expect(resolveWorkspaceContext(db, {
+      userId: 7,
+      workspaceId: 'workspace-1',
+    })).resolves.toEqual(expect.objectContaining({
+      id: 'workspace-1',
+      role: 'owner',
+      tenantId: null,
+    }));
+  });
 });

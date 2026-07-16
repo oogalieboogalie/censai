@@ -101,8 +101,12 @@ export async function handleChat(req, res) {
     // Log conversation
     const lastUserMsg = messages?.filter(m => m.from === 'me').pop()?.text;
     if (dbReady() && agentId && lastUserMsg) {
-      logConversation(agentId, 'user', lastUserMsg).catch(() => {});
-      logConversation(agentId, 'assistant', finalText).catch(() => {});
+      logConversation(agentId, 'user', lastUserMsg).catch(err =>
+        console.error('[chat] dropped conversation log (user)', { agentId, error: err.message })
+      );
+      logConversation(agentId, 'assistant', finalText).catch(err =>
+        console.error('[chat] dropped conversation log (assistant)', { agentId, error: err.message })
+      );
 
       // Reactive Memory Healing Cascade
       runHealingCascadeIfMentioned(lastUserMsg, 'Alex').catch(err => {

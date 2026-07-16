@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMailcowMutations } from './useMailcowMutations.js';
+import { useVisibilityAwareInterval } from '../../lib/usePolling.js';
 
 export function useMailcow() {
   const [activeTab, setActiveTab] = React.useState('domains');
@@ -71,11 +72,10 @@ export function useMailcow() {
 
   React.useEffect(() => { fetchHealth(); }, []);
   React.useEffect(() => { if (health.configured) fetchData(); }, [health.configured, activeTab, fetchData]);
-  React.useEffect(() => {
-    if (!health.configured) return;
-    const interval = setInterval(() => { fetchHealth(); fetchData(); }, 30000);
-    return () => clearInterval(interval);
-  }, [health.configured, activeTab, fetchData]);
+  useVisibilityAwareInterval(() => {
+    fetchHealth();
+    fetchData();
+  }, health.configured ? 30000 : null);
 
   const mutations = useMailcowMutations({
     domainForm, setDomainForm, mailboxForm, setMailboxForm,

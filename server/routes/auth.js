@@ -2,8 +2,11 @@ import express from 'express';
 import { google } from 'googleapis';
 import crypto from 'crypto';
 import pool from '../db.js';
+import { dbReady } from '../dbState.js';
 import { getClientAccessPolicy } from '../security/byokPolicy.js';
 import { saveOAuthCredential } from '../credentials/oauthStore.js';
+import rateLimiter from '../middleware/rateLimiter.js';
+import { authSecurityRateLimiter } from '../middleware/standardRateLimits.js';
 
 export const authRouter = express.Router();
 
@@ -16,7 +19,7 @@ const oauth2Client = new google.auth.OAuth2(
   GOOGLE_REDIRECT_URI
 );
 
-authRouter.get('/google', (req, res) => {
+authRouter.get('/google', authSecurityRateLimiter, rateLimiter, (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   req.session.oauth_state = state;
 
@@ -41,7 +44,7 @@ authRouter.get('/google', (req, res) => {
   });
 });
 
-authRouter.get('/google/callback', async (req, res) => {
+authRouter.get('/google/callback', authSecurityRateLimiter, rateLimiter, async (req, res) => {
   try {
     const { code, state, error } = req.query;
     if (error) {
@@ -120,7 +123,17 @@ authRouter.get('/google/callback', async (req, res) => {
   }
 });
 
-authRouter.post('/developer', async (req, res) => {
+authRouter.post('/developer', authSecurityRateLimiter, rateLimiter, async (req, res) => {
+  // The DB schema (users + session tables) is bootstrapped asynchronously during
+  // boot. If the first login attempt arrives while probeDb is still running the
+  // multi-user SQL, the raw pool.query would throw "relation does not exist" and
+  // bubble up as a 500. Mirror the other routes: return a clean 503 so the client
+  // knows to retry.
+  if (!dbReady()) {
+    res.setHeader('Retry-After', '2');
+    return res.status(503).json({ error: 'Database initializing, please retry in a moment.' });
+  }
+
   const isOauthConfigured = !!(process.env.G_CLIENT_ID && process.env.G_SECRET);
   if (isOauthConfigured && process.env.NODE_ENV === 'production') {
     return res.status(403).json({ error: 'Developer login disabled when Google OAuth is configured' });
@@ -190,7 +203,7 @@ authRouter.get('/session', async (req, res) => {
   });
 });
 
-authRouter.get('/logout', (req, res) => {
+authRouter.post('/logout', authSecurityRateLimiter, (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error('Failed to destroy session:', err);

@@ -96,7 +96,9 @@ export function Chrome({
           <PSButton color="var(--ps-red)" title={closeTitle} onClick={onClose}><Icon.Close size={10} stroke={2.4}/></PSButton>
         </div>
       </div>
-      {projectName && <div style={{ position: 'fixed', top: 14, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', zIndex: 5, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-faint)', opacity: 0.55 }}>{projectName}</div>}
+      {projectName && <div style={{ position: 'fixed', top: 14, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none', zIndex: 5, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-faint)', opacity: 0.55 }}>
+        {projectName.toLowerCase() === 'homebase' ? 'Censai' : projectName}
+      </div>}
     </>
   );
 }

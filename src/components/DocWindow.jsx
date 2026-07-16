@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from './Icons.jsx';
+import { WindowTitle } from './Windows.jsx';
 import { getAgentById } from '../lib/agentStore.js';
 import { renderMarkdown } from '../lib/renderMarkdown.jsx';
 import { ANNOTATION_COLORS } from './doc/DocData.js';
@@ -38,49 +39,56 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign, wo
 
   return (
     <div data-win-root style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative', userSelect: 'text', WebkitUserSelect: 'text' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 60px 8px 12px', borderBottom: '1px dashed var(--hairline)', flexShrink: 0 }}>
-        <span style={{ color: 'var(--accent-ink)' }}><Icon.Files size={14}/></span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>{win.fileName}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-faint)', fontWeight: 400 }}>&nbsp;· {win.isGithub ? 'github' : 'markdown'}</span>
+      <WindowTitle
+        icon={<Icon.Files size={14} />}
+        label={win.fileName}
+        subtitle={win.isGithub ? 'github' : 'markdown'}
+        attachedAgentIds={win.attachedAgents}
+        onDetach={(id) => onUpdate({ attachedAgents: (win.attachedAgents || []).filter(a => a !== id) })}
+      >
         {win.isGithub && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--ink)' }}>{win.githubRepo}</span>}
-        <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', gap: 6, position: 'relative', zIndex: 10 }}>
-            <button
-              onClick={() => {
-                const calWin = wins?.find(w => w.kind === 'calendar');
-                const prefill = {
-                  title: `Review: ${win.fileName}`,
-                  description: `Review document ${win.fileName} on Censai canvas.\n\nhb://doc/${win.fileName}`,
-                  date: new Date().toISOString().split('T')[0],
-                  startTime: '09:00',
-                  endTime: '10:00'
-                };
-                if (calWin) {
-                  onSpawn('calendar', { data: { prefill } });
-                  onSelect?.(calWin.id);
-                } else {
-                  onSpawn('calendar', { data: { prefill } });
-                }
-              }}
-              style={{ all: 'unset', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, background: 'var(--ps-red)22', color: 'var(--ps-red)', border: '1px solid var(--ps-red)44', fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)' }}
-            >
-              Calendar
-            </button>
-        {win.filePath && !win.isGithub && (
+        <button
+          onClick={() => {
+            const calWin = wins?.find(w => w.kind === 'calendar');
+            const prefill = {
+              title: `Review: ${win.fileName}`,
+              description: `Review document ${win.fileName} on Censai canvas.\n\nhb://doc/${win.fileName}`,
+              date: new Date().toISOString().split('T')[0],
+              startTime: '09:00',
+              endTime: '10:00'
+            };
+            if (calWin) {
+              onSpawn('calendar', { data: { prefill } });
+              onSelect?.(calWin.id);
+            } else {
+              onSpawn('calendar', { data: { prefill } });
+            }
+          }}
+          style={{ all: 'unset', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, background: 'var(--ps-red)22', color: 'var(--ps-red)', border: '1px solid var(--ps-red)44', fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)' }}
+        >
+          Calendar
+        </button>
+        {!win.isGithub && (
           <>
             <button 
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                const nextEdit = !isEditing;
+                setIsEditing(nextEdit);
+                onUpdate({ isEditing: nextEdit });
+              }}
               style={{ all: 'unset', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, background: isEditing ? 'var(--surface-2)' : 'transparent', color: isEditing ? 'var(--ink)' : 'var(--ink-soft)', border: '1px solid var(--hairline)', fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)' }}
             >
               {isEditing ? 'View' : 'Edit'}
             </button>
-            <button 
-              onClick={saveFile}
-              disabled={saving}
-              style={{ all: 'unset', cursor: saving ? 'wait' : 'pointer', padding: '4px 10px', borderRadius: 6, background: 'var(--accent-soft)', color: 'var(--accent-ink)', fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)', opacity: saving ? 0.5 : 1 }}
-            >
-              {saving ? 'Saving...' : 'Save File'}
-            </button>
+            {win.filePath && (
+              <button 
+                onClick={saveFile}
+                disabled={saving}
+                style={{ all: 'unset', cursor: saving ? 'wait' : 'pointer', padding: '4px 10px', borderRadius: 6, background: 'var(--accent-soft)', color: 'var(--accent-ink)', fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-mono)', opacity: saving ? 0.5 : 1 }}
+              >
+                {saving ? 'Saving...' : 'Save File'}
+              </button>
+            )}
           </>
         )}
         <button
@@ -89,8 +97,7 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign, wo
         >
           Graph
         </button>
-        </div>
-      </div>
+      </WindowTitle>
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: win.maximized ? '1fr' : '1fr 200px', overflow: 'hidden' }}>
         {showGraph ? (
           <NoteGraph
@@ -101,6 +108,10 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign, wo
           />
         ) : (
           <div ref={bodyRef} onMouseUp={isEditing ? undefined : onMouseUp} data-doc-body
+            onDoubleClick={isEditing ? undefined : () => {
+              setIsEditing(true);
+              onUpdate({ isEditing: true });
+            }}
             style={{
               overflowY: 'auto',
               padding: win.maximized ? '40px 10%' : '18px 24px 32px',
@@ -119,8 +130,14 @@ export function DocWindow({ win, onUpdate, onSpawn, onSelect, wins, onAssign, wo
               <textarea
                 autoFocus
                 value={realContent}
-                onChange={(e) => setRealContent(e.target.value)}
-                onBlur={() => { if (/\.md$/i.test(win.fileName || win.filePath || '')) setIsEditing(false); }}
+                onChange={(e) => {
+                  setRealContent(e.target.value);
+                  onUpdate({ text: e.target.value });
+                }}
+                onBlur={() => {
+                  setIsEditing(false);
+                  onUpdate({ isEditing: false });
+                }}
                 onMouseUp={onTextareaSelection}
                 onKeyUp={onTextareaSelection}
                 onSelect={onTextareaSelection}

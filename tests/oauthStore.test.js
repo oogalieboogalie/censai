@@ -46,6 +46,61 @@ describe('OAuth credential store', () => {
     expect(values[3]).not.toContain('refresh-secret');
   });
 
+  test('encrypts even when the production vault secret is missing (dev-key fallback)', async () => {
+    // The vault falls back to a deterministic local-dev key when
+    // CENSAI_VAULT_SECRET is unset. Encryption must still happen so raw
+    // tokens never land in the encrypted columns.
+    delete process.env.CENSAI_VAULT_SECRET;
+    const db = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+    await saveOAuthCredential({
+      db,
+      userId: 7,
+      provider: 'google',
+      tokens: {
+        access_token: 'dummy-access-fallback',
+        refresh_token: 'dummy-refresh-fallback',
+      },
+    });
+
+    const [sql, values] = db.query.mock.calls[0];
+    expect(sql).toContain('access_token = NULL');
+    expect(sql).toContain('refresh_token = NULL');
+    expect(values[2]).not.toBe('dummy-access-fallback');
+    expect(values[3]).not.toBe('dummy-refresh-fallback');
+    expect(String(values[2])).not.toContain('dummy-access-fallback');
+    expect(String(values[3])).not.toContain('dummy-refresh-fallback');
+  });
+
+  test('never includes raw tokens anywhere in the SQL parameter list', async () => {
+    // The defensive guarantee: scan every value passed to db.query and
+    // make sure neither the raw access_token nor the raw refresh_token
+    // appears in any position (including scope, expiry_date, etc).
+    const db = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+    await saveOAuthCredential({
+      db,
+      userId: 7,
+      provider: 'google',
+      tokens: {
+        access_token: 'dummy-private-access-do-not-leak',
+        refresh_token: 'dummy-private-refresh-do-not-leak',
+        expiry_date: 9999,
+        scope: 'calendar.readonly',
+      },
+    });
+
+    const [sql, values] = db.query.mock.calls[0];
+    for (const value of values) {
+      const asString = value === null || value === undefined ? '' : String(value);
+      expect(asString).not.toContain('dummy-private-access-do-not-leak');
+      expect(asString).not.toContain('dummy-private-refresh-do-not-leak');
+    }
+    // And the SQL itself must not contain the raw token strings either.
+    expect(sql).not.toContain('dummy-private-access-do-not-leak');
+    expect(sql).not.toContain('dummy-private-refresh-do-not-leak');
+  });
+
   test('decrypts encrypted credentials for provider clients', async () => {
     const writer = { query: jest.fn().mockResolvedValue({ rows: [] }) };
     await saveOAuthCredential({

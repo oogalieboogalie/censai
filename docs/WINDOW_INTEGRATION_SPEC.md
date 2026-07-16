@@ -1,6 +1,6 @@
 # Window Integration Contract
 
-The Window Integration Contract is the repo-native pattern for provider windows in CensaiHub. It lets a new provider join the canvas with:
+The Window Integration Contract is the repo-native pattern for provider windows in CensaiHub. It is also the first browser-facing slice of the broader **Module Registry**: one manifest system for windows, tools, integrations, agents, and packages. It lets a new provider join the canvas with:
 
 1. one manifest entry in `src/lib/windowManifest.js`
 2. one React component in `src/components/*Window.jsx`
@@ -15,6 +15,19 @@ No app-level branching should be required for a new provider window.
 - Give agents and UI code one stable metadata shape to inspect.
 - Keep existing windows working. The `integration` block is optional.
 - Keep provider-specific behavior inside the provider window or provider service module, not in `AppContent.jsx`.
+- Expose Control Plane metadata that can later drive permissions, policy, scheduling, and the Execution Ledger.
+
+## Platform Vocabulary
+
+- **Control Plane**: commands, runs, permissions, the Module Registry, policy, and scheduling.
+- **Data Plane**: generated files, provider calls, scans, artifacts, and tool execution.
+- **Capability Membrane**: the actor + tenant + runtime + side-effect permission boundary.
+- **Execution Ledger**: durable run records for commands, imports, scans, agents, and tools.
+- **Artifact Graph**: links between prompts, PRs, generated files, scans, runs, and decisions.
+- **Trust Boundary**: the crossing from generated/untrusted code into the executable app surface.
+- **Runtime Affinity**: where a module is allowed to execute.
+- **Installation Scope**: who owns or receives an installed module.
+- **Policy Gate**: machine-checkable approval before side effects.
 
 ## Manifest Shape
 
@@ -112,10 +125,11 @@ Validation warns for:
 ## Security Rules
 
 - Never persist raw secrets in workspace state. Provider windows may keep transient form state, but successful connection should exchange the secret and clear the input.
-- Treat `embedMode` as a trust boundary. `iframe`, `proxy`, and `hybrid` windows need provider-specific hardening before they expose agent tools.
+- Treat `embedMode` and generated window import as a Trust Boundary. `iframe`, `proxy`, and `hybrid` windows need provider-specific hardening before they expose agent tools.
 - Use `defaultPermissions` as the workspace-level contract only. Provider-specific OAuth scopes belong in the provider implementation.
 - Agent-accessible provider actions should be advertised through `capabilities: ['agentTools']` and enforced by server-side permission checks before any side effect.
 - `dangerLevel` should drive confirmation friction and UI emphasis. `high` and `critical` integrations should not silently execute destructive operations from an attached agent.
+- Any module with non-empty `sideEffects` should eventually pass a Policy Gate and write an Execution Ledger run before performing Data Plane work.
 
 ## Demo Window
 
@@ -155,11 +169,33 @@ the *only* hand-edit needed to add a window. Everything else is derived:
   persistence: 'workspace',          // 'workspace' (default) | 'local_only'
   entitlement: 'windows.myWindow',   // default: windows.<kind>
   modeAvailability: { cloud_saas: false }, // merged over { local_desktop, private_server, cloud_saas } = all true
+  installScope: 'workspace',         // 'global' | 'tenant' | 'workspace' | 'user' | 'session' | 'local_only'
+  runtimeAffinity: 'browser',        // 'browser' | 'server' | 'local_desktop' | 'private_server' | 'cloud_saas' | 'sandbox' | 'worker'
+  requiredCapabilities: [],          // Capability Membrane requirements
+  sideEffects: [],                   // Data Plane writes, calls, or other effects
+  artifactTypes: [],                 // Artifact Graph node types emitted/read by this module
   // launcher tile (omit to keep the window out of the empty-state launcher):
   launcher: { show: true, order: 140, icon: 'Tools', label: 'My Window', hint: 'what it does' },
   integration: { /* provider block — see above */ },
 }
 ```
+
+### Module Registry v2 fields
+
+`installScope`
+: Optional Installation Scope. Defaults to `workspace`, except `persistence: 'local_only'` defaults to `local_only`.
+
+`runtimeAffinity`
+: Optional Runtime Affinity. Defaults to `browser`.
+
+`requiredCapabilities`
+: Optional array of Capability Membrane capability ids required before privileged behavior.
+
+`sideEffects`
+: Optional array of Data Plane side effects the module may perform, such as filesystem writes, provider calls, scans, or artifact writes.
+
+`artifactTypes`
+: Optional array of Artifact Graph node types the module emits, reads, or links.
 
 ## Adding A Window Or Provider
 

@@ -16,9 +16,9 @@ const STYLES = `
     animation: fadeIn 1s ease-out 0.3s forwards;
   }
   .dot-grid {
-    background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
     background-size: 24px 24px;
-    background-color: rgb(235, 247, 255);
+    background-color: #00041f;
   }
 `;
 
@@ -56,7 +56,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
       display: 'flex',
       flexDirection: 'column',
       fontFamily: "'Sora', sans-serif",
-      color: '#0f172a',
+      color: '#e5e7eb',
       overflowX: 'hidden',
       zIndex: 9999
     }}>
@@ -130,7 +130,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
           fontSize: '0.75rem',
           textTransform: 'uppercase',
           letterSpacing: '0.15em',
-          color: '#6b7280',
+          color: '#9ca3af',
           fontWeight: 600
         }}>
           <span style={{ flex: 1, height: '1px', backgroundColor: 'rgba(8, 16, 216, 0.15)' }} />
@@ -276,7 +276,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: showDevForm ? '#0810d8' : '#374151',
+              color: showDevForm ? '#0810d8' : '#cbd5e1',
               transition: 'all 0.2s',
               cursor: 'pointer',
               boxShadow: showDevForm ? '0 0 15px rgba(8, 16, 216, 0.15)' : '0 1px 2px rgba(0,0,0,0.05)'
@@ -312,7 +312,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#374151',
+              color: '#cbd5e1',
               transition: 'all 0.2s',
               cursor: 'pointer',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
@@ -377,7 +377,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
               <label style={{
                 fontSize: '11px',
                 fontWeight: 600,
-                color: '#4b5563',
+                color: '#cbd5e1',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em'
               }}>
@@ -395,7 +395,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                   border: '1px solid rgba(8, 16, 216, 0.15)',
                   borderRadius: '8px',
                   fontSize: '13px',
-                  color: '#0f172a',
+                  color: '#e5e7eb',
                   outline: 'none',
                   transition: 'all 0.2s'
                 }}
@@ -414,7 +414,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
               <label style={{
                 fontSize: '11px',
                 fontWeight: 600,
-                color: '#4b5563',
+                color: '#cbd5e1',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em'
               }}>
@@ -431,7 +431,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                   border: '1px solid rgba(8, 16, 216, 0.15)',
                   borderRadius: '8px',
                   fontSize: '13px',
-                  color: '#0f172a',
+                  color: '#e5e7eb',
                   outline: 'none',
                   transition: 'all 0.2s'
                 }}
@@ -449,34 +449,42 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
             <button
               type="submit"
               disabled={loading}
+              data-convex-lens="true"
               style={{
+                position: 'relative',
                 marginTop: '8px',
                 padding: '12px 16px',
-                background: '#0810d8',
+                // Convex lens: light highlight at upper-center, dark rim at edge.
+                // Ellipse skewed slightly upward so the highlight reads as a dome top.
+                background: 'radial-gradient(ellipse 75% 100% at 50% 25%, #6a73ff 0%, #2a32e6 38%, #0810d8 70%, #050796 100%)',
                 color: '#ffffff',
-                border: 'none',
+                border: '1px solid rgba(8, 16, 216, 0.6)',
                 borderRadius: '9999px',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 textAlign: 'center',
-                boxShadow: '0 4px 12px rgba(8, 16, 216, 0.2)',
-                transition: 'all 0.2s'
+                letterSpacing: '0.02em',
+                textShadow: '0 1px 0 rgba(0, 0, 0, 0.2)',
+                // Top inset highlight + bottom inset shadow give the bevel; outer shadow lifts.
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 4px 12px rgba(8, 16, 216, 0.35)',
+                transition: 'transform 0.2s ease, box-shadow 0.25s ease, background 0.25s ease'
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(8, 16, 216, 0.3)';
+                  // Hover: glow kicks in. Two layered drop-shadows mimic the logo's radial halo.
+                  e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(106, 115, 255, 0.5), 0 0 26px 2px rgba(106, 115, 255, 0.35), 0 6px 18px rgba(8, 16, 216, 0.4)';
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(8, 16, 216, 0.2)';
+                e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 4px 12px rgba(8, 16, 216, 0.35)';
               }}
             >
               {loading ? 'Entering...' : 'Enter Canvas'}
             </button>
-            <span style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', marginTop: '4px' }}>
+            <span style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '4px' }}>
               * Developer Bypass Mode
             </span>
           </form>
@@ -497,13 +505,13 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
           <a href="#"
              onClick={(e) => { e.preventDefault(); setShowPrivacy(true); }}
              style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s', cursor: 'pointer' }}
-             onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+             onMouseEnter={(e) => e.currentTarget.style.color = '#e5e7eb'}
              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}>Privacy</a>
           <a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}
-             onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+             onMouseEnter={(e) => e.currentTarget.style.color = '#e5e7eb'}
              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}>Terms</a>
           <a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}
-             onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+             onMouseEnter={(e) => e.currentTarget.style.color = '#e5e7eb'}
              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}>Help</a>
         </footer>
         {/* END: Footer Links */}
@@ -536,7 +544,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
             flexDirection: 'column',
             boxShadow: '0 20px 50px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
             overflow: 'hidden',
-            color: '#1e293b'
+            color: '#e2e8f0'
           }}>
             {/* Modal Header */}
             <div style={{
@@ -548,8 +556,8 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
               background: 'linear-gradient(to right, rgba(8, 16, 216, 0.03), transparent)'
             }}>
               <div style={{ textAlign: 'left' }}>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#0f172a', letterSpacing: '-0.02em' }}>Privacy Policy & Data Flow</h3>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>Supporting self-hosted and secure cloud environments.</p>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e5e7eb', letterSpacing: '-0.02em' }}>Privacy Policy & Data Flow</h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>Supporting self-hosted and secure cloud environments.</p>
               </div>
               <button 
                 onClick={() => setShowPrivacy(false)}
@@ -563,12 +571,12 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#475569',
+                  color: '#cbd5e1',
                   transition: 'all 0.2s',
                   fontSize: '0.85rem'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(8, 16, 216, 0.1)'; e.currentTarget.style.color = '#0f172a'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(8, 16, 216, 0.05)'; e.currentTarget.style.color = '#475569'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(8, 16, 216, 0.1)'; e.currentTarget.style.color = '#e5e7eb'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(8, 16, 216, 0.05)'; e.currentTarget.style.color = '#cbd5e1'; }}
               >
                 Close
               </button>
@@ -596,8 +604,8 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                 alignItems: 'flex-start'
               }}>
                 <div>
-                  <h4 style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#0f172a' }}>Local or Cloud Workspace Storage</h4>
-                  <p style={{ margin: 0, color: '#475569', fontSize: '0.8rem' }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#e5e7eb' }}>Local or Cloud Workspace Storage</h4>
+                  <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.8rem' }}>
                     Depending on your installation type (self-hosted local vs. cloud deployment), all canvas boards, layout states, and configurations are stored either in your local browser storage (under the key <code style={{ background: 'rgba(8, 16, 216, 0.06)', padding: '2px 4px', borderRadius: '4px' }}>homebase.workspace.v1</code>) or synchronized with your cloud database account. We do not track telemetry, usage analytics, or keystrokes.
                   </p>
                 </div>
@@ -605,20 +613,20 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
 
               {/* Journal Security Section */}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#0f172a' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#e5e7eb' }}>
                   Journal Security & Encryption
                 </h4>
-                <p style={{ margin: 0, color: '#475569' }}>
+                <p style={{ margin: 0, color: '#cbd5e1' }}>
                   Agent journals are encrypted at rest using industry-standard AES-256-GCM. Encryption keys are securely managed via environment-defined variables in self-hosted instances, or isolated cloud key vaults in cloud deployments, keeping your private workspace journals confidential.
                 </p>
               </div>
 
               {/* Authentication Providers */}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#0f172a' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#e5e7eb' }}>
                   Authentication Providers
                 </h4>
-                <p style={{ margin: '0 0 0.75rem 0', color: '#475569' }}>
+                <p style={{ margin: '0 0 0.75rem 0', color: '#cbd5e1' }}>
                   When using OAuth for secure login, your authentication requests are processed directly by the respective providers. You can review their privacy policies below:
                 </p>
                 <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr 1fr' }}>
@@ -628,7 +636,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                     padding: '1rem',
                     backgroundColor: 'rgba(255, 255, 255, 0.5)',
                     textDecoration: 'none',
-                    color: '#0f172a',
+                    color: '#e5e7eb',
                     fontWeight: 600,
                     fontSize: '0.85rem',
                     transition: 'all 0.2s',
@@ -638,7 +646,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                   }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(8, 16, 216, 0.2)'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'; }}>
                     <span>Google Privacy Policy</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>View Google's terms and data policies ↗</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#94a3b8' }}>View Google's terms and data policies ↗</span>
                   </a>
 
                   <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener noreferrer" style={{
@@ -647,7 +655,7 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                     padding: '1rem',
                     backgroundColor: 'rgba(255, 255, 255, 0.5)',
                     textDecoration: 'none',
-                    color: '#0f172a',
+                    color: '#e5e7eb',
                     fontWeight: 600,
                     fontSize: '0.85rem',
                     transition: 'all 0.2s',
@@ -657,72 +665,72 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
                   }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(8, 16, 216, 0.2)'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'; }}>
                     <span>GitHub Privacy Statement</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>View GitHub's terms and data policies ↗</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#94a3b8' }}>View GitHub's terms and data policies ↗</span>
                   </a>
                 </div>
               </div>
 
               {/* AI Provider Details */}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#0f172a' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#e5e7eb' }}>
                   Artificial Intelligence Providers
                 </h4>
-                <p style={{ margin: '0 0 0.75rem 0', color: '#475569' }}>
+                <p style={{ margin: '0 0 0.75rem 0', color: '#cbd5e1' }}>
                   Censai Hub routes agent prompts to various language models depending on your settings. The data flows for each supported provider are detailed below:
                 </p>
                 
                 <div style={{ display: 'grid', gap: '0.75rem' }}>
                   {/* Ollama */}
                   <div style={{ border: '1px solid rgba(0, 0, 0, 0.06)', borderRadius: '12px', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600, color: '#e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                       <span>Ollama (Local Execution)</span>
                       <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '100px', fontWeight: 700 }}>Fully Private</span>
                     </div>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                       Runs entirely on your local hardware. No prompt data, code snippets, or agent personalities are ever sent to external cloud servers.
                     </p>
                   </div>
 
                   {/* Google */}
                   <div style={{ border: '1px solid rgba(0, 0, 0, 0.06)', borderRadius: '12px', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600, color: '#e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                       <span>Google Gemini / Google Native API</span>
                       <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '100px', fontWeight: 700 }}>Cloud API</span>
                     </div>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                       Prompts, code contexts, and tool payloads are sent to Google Gemini endpoints. Processed in accordance with Google Cloud APIs terms of service (inputs are generally not used to train models).
                     </p>
                   </div>
 
                   {/* OpenRouter */}
                   <div style={{ border: '1px solid rgba(0, 0, 0, 0.06)', borderRadius: '12px', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600, color: '#e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                       <span>OpenRouter</span>
                       <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '100px', fontWeight: 700 }}>Cloud Proxy</span>
                     </div>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                       Acts as an API proxy routing your requests to various models. Prompts and tool parameters are forwarded to selected models through OpenRouter's developer gateway.
                     </p>
                   </div>
 
                   {/* Cohere */}
                   <div style={{ border: '1px solid rgba(0, 0, 0, 0.06)', borderRadius: '12px', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600, color: '#e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                       <span>Cohere API</span>
                       <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '100px', fontWeight: 700 }}>Cloud API</span>
                     </div>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                       Utilized for high-performance embeddings and specific chat requirements under Cohere's production privacy model policies.
                     </p>
                   </div>
 
                   {/* Moonshot */}
                   <div style={{ border: '1px solid rgba(0, 0, 0, 0.06)', borderRadius: '12px', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 600, color: '#e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                       <span>Moonshot / Kimi API</span>
                       <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '100px', fontWeight: 700 }}>Cloud API</span>
                     </div>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                       Generative prompts and context are transmitted to Moonshot endpoints and governed by Moonshot AI policies.
                     </p>
                   </div>
@@ -731,10 +739,10 @@ export function Login({ onLoginSuccess, oauthConfigured }) {
 
               {/* Data boundary */}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#0f172a' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#e5e7eb' }}>
                   Infrastructure and Storage Boundaries
                 </h4>
-                <p style={{ margin: 0, color: '#475569' }}>
+                <p style={{ margin: 0, color: '#cbd5e1' }}>
                   For local self-hosted instances, your databases (PostgreSQL and Qdrant) run completely on your machine. For cloud versions, data is isolated in secure, single-tenant or multi-tenant database clusters protected by modern firewalls and authentication gates, ensuring complete ownership over your AI ecosystem's long-term memory.
                 </p>
               </div>

@@ -6,6 +6,7 @@ import { mailcowTools } from './definitions/mailcow.js';
 import { vexTools } from './definitions/vex.js';
 import { depTools } from './definitions/deps.js';
 import { discoveryTools } from './definitions/discovery.js';
+import { reliabilityTools } from './definitions/reliability.js';
 
 export * from './rbac/index.js';
 export * from './catalog.js';
@@ -25,4 +26,5 @@ export const TOOL_DEFINITIONS = [
   ...mailcowTools,
   ...vexTools,
   ...depTools,
+  ...reliabilityTools,
 ];

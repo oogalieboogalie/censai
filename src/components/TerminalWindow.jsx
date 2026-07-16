@@ -58,6 +58,7 @@ export function TerminalWindow({ win, onUpdate, currentProject, zoom = 1 }) {
       />
       <div
         ref={hostRef}
+        className={win.opacity !== undefined ? 'terminal-translucent' : ''}
         onPointerDown={(event) => {
           event.stopPropagation();
           termRef.current?.focus();
@@ -80,7 +81,7 @@ export function TerminalWindow({ win, onUpdate, currentProject, zoom = 1 }) {
           flex: 1,
           minHeight: 0,
           padding: 0,
-          background: theme.background,
+          background: win.opacity !== undefined ? 'transparent' : theme.background,
           overflow: 'hidden',
           cursor: 'text',
           userSelect: 'text',

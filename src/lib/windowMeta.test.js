@@ -11,6 +11,8 @@
 import {
   FALLBACK_WINDOW_SIZE,
   DEFAULT_MODE_AVAILABILITY,
+  DEFAULT_INSTALL_SCOPE,
+  DEFAULT_RUNTIME_AFFINITY,
   toComponentName,
   normalizeWindowMeta,
   deriveManifestEntry,
@@ -57,6 +59,11 @@ describe('normalizeWindowMeta', () => {
     expect(m.persistence).toBe('workspace');
     expect(m.entitlement).toBe('windows.notes');
     expect(m.modeAvailability).toEqual(DEFAULT_MODE_AVAILABILITY);
+    expect(m.installScope).toBe(DEFAULT_INSTALL_SCOPE);
+    expect(m.runtimeAffinity).toBe(DEFAULT_RUNTIME_AFFINITY);
+    expect(m.requiredCapabilities).toEqual([]);
+    expect(m.sideEffects).toEqual([]);
+    expect(m.artifactTypes).toEqual([]);
   });
 
   test('honors explicit overrides', () => {
@@ -71,6 +78,11 @@ describe('normalizeWindowMeta', () => {
       persistence: 'local_only',
       entitlement: 'windows.sticky',
       modeAvailability: { cloud_saas: false },
+      installScope: 'tenant',
+      runtimeAffinity: 'private_server',
+      requiredCapabilities: ['window.write'],
+      sideEffects: ['filesystem.write'],
+      artifactTypes: ['generated_window'],
     });
     expect(m.canvasType).toBe('sticky');
     expect(m.componentName).toBe('StickyWindow');
@@ -85,6 +97,20 @@ describe('normalizeWindowMeta', () => {
       private_server: true,
       cloud_saas: false,
     });
+    expect(m.installScope).toBe('tenant');
+    expect(m.runtimeAffinity).toBe('private_server');
+    expect(m.requiredCapabilities).toEqual(['window.write']);
+    expect(m.sideEffects).toEqual(['filesystem.write']);
+    expect(m.artifactTypes).toEqual(['generated_window']);
+  });
+
+  test('local-only persistence defaults installation scope to local_only', () => {
+    const m = normalizeWindowMeta({
+      kind: 'files',
+      label: 'Files',
+      persistence: 'local_only',
+    });
+    expect(m.installScope).toBe('local_only');
   });
 
   test('falls back to a safe size when defaultSize is invalid', () => {
@@ -144,6 +170,11 @@ describe('deriveRegistryEntry', () => {
       persistence: 'workspace',
       entitlement: 'windows.notes',
       modeAvailability: { local_desktop: true, private_server: true, cloud_saas: true },
+      installScope: 'workspace',
+      runtimeAffinity: 'browser',
+      requiredCapabilities: [],
+      sideEffects: [],
+      artifactTypes: [],
     });
   });
 });

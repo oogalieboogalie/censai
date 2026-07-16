@@ -37,7 +37,7 @@ export function useTerminal(hostRef, win, cwd, theme) {
       fontFamily: '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace',
       fontSize: Math.round((theme.fontSize || 13) * (win.fontScale || 1.0)),
       lineHeight: 1.25,
-      theme: theme,
+      theme: win.opacity !== undefined ? { ...theme, background: 'rgba(0,0,0,0)' } : theme,
       allowProposedApi: true,
       rightClickSelectsWord: true,
       trimTrailingWhitespace: true,

@@ -6,7 +6,7 @@ import { MEDIA_WINDOW_MANIFESTS } from './manifest/mediaWindows.js';
 import { INTEGRATION_WINDOW_MANIFEST_DATA } from './manifest/integrationWindows.js';
 import { FACTORY_WINDOW_MANIFESTS } from './manifest/factoryWindows.js';
 
-export const WINDOW_MANIFEST_VERSION = 1;
+export const WINDOW_MANIFEST_VERSION = 2;
 
 /**
  * Module types in the registry. `window` is the default. The discriminator lets
@@ -39,12 +39,13 @@ export const WINDOW_MANIFEST_BY_CANVAS_TYPE = Object.freeze(Object.fromEntries(
   WINDOW_MANIFESTS.map((manifest) => [manifest.canvasType || manifest.kind, manifest])
 ));
 
-// WINDOW_REGISTRY is DERIVED from the manifest — the manifest is the single
-// source of truth. Each entry expands through deriveRegistryEntry (src/lib/windowMeta.js):
-// defaults filled in, with any runtime overrides (persistence/entitlement/
-// modeAvailability/title) authored flat on the manifest entry. Canvas-type
-// aliases (e.g. todos -> todo) get their own key so lookups by canvas type still
-// resolve. Do NOT hand-author registry entries — add a manifest entry instead.
+// WINDOW_REGISTRY is the browser-facing Module Registry for windows, DERIVED
+// from the manifest as the single source of truth. Each entry expands through
+// deriveRegistryEntry (src/lib/windowMeta.js): defaults filled in, with runtime
+// overrides and Control Plane fields authored flat on the manifest entry.
+// Canvas-type aliases (e.g. todos -> todo) get their own key so lookups by
+// canvas type still resolve. Do NOT hand-author registry entries — add a
+// manifest entry instead.
 export const WINDOW_REGISTRY = Object.freeze(WINDOW_MANIFESTS.reduce((acc, manifest) => {
   const entry = Object.freeze(deriveRegistryEntry(manifest));
   acc[manifest.kind] = entry;

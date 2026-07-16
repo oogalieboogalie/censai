@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from './Icons.jsx';
 import { WindowTitle } from './windows/WindowTitle.jsx';
+import { useVisibilityAwareInterval } from '../lib/usePolling.js';
 
 export function ContainersWindow({ win, onUpdate }) {
   const [containers, setContainers] = useState([]);
@@ -27,9 +28,9 @@ export function ContainersWindow({ win, onUpdate }) {
 
   useEffect(() => {
     fetchContainers();
-    const interval = setInterval(fetchContainers, 5000); // poll every 5s
-    return () => clearInterval(interval);
   }, []);
+
+  useVisibilityAwareInterval(fetchContainers, 5000);
 
   const handleLogs = async (service) => {
     try {

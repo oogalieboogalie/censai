@@ -1,5 +1,5 @@
 import pool from '../db.js';
-import { createArtifact, createWorkspaceEvent } from '../operational-intelligence/factories.js';
+import { createArtifact } from '../operational-intelligence/factories.js';
 
 /**
  * Records immutable evidence for an automated or AI action.

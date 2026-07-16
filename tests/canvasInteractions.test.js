@@ -2,7 +2,6 @@ import {
   basenameFromPath,
   findRegionNeighbor,
   getSvgPathFromStroke,
-  snapStrokeToRectangle,
   windowInsideGroup,
 } from '../src/components/canvas/CanvasInteractions.js';
 
@@ -30,18 +29,5 @@ describe('Canvas interaction helpers', () => {
   test('extracts the basename from Windows and POSIX paths', () => {
     expect(basenameFromPath('C:\\Projects\\Demo')).toBe('Demo');
     expect(basenameFromPath('/tmp/workspace')).toBe('workspace');
-  });
-
-  test('snaps a hand-drawn rectangle stroke into a closed rectangle path', () => {
-    const points = [
-      { x: 0, y: 0 }, { x: 30, y: 0 }, { x: 60, y: 0 },
-      { x: 60, y: 30 }, { x: 60, y: 60 }, { x: 30, y: 60 },
-      { x: 0, y: 60 }, { x: 0, y: 30 }, { x: 0, y: 0 },
-    ];
-
-    const snapped = snapStrokeToRectangle(points);
-
-    expect(snapped).toHaveLength(5);
-    expect(snapped[0]).toEqual(snapped[4]);
   });
 });

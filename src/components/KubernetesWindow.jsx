@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from './Icons.jsx';
 import { WindowTitle } from './windows/WindowTitle.jsx';
+import { useVisibilityAwareInterval } from '../lib/usePolling.js';
 
 export function KubernetesWindow({ win, onUpdate }) {
   const [data, setData] = useState({ namespaces: [], pods: [], deployments: [] });
@@ -29,9 +30,9 @@ export function KubernetesWindow({ win, onUpdate }) {
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 10000); // poll every 10s
-    return () => clearInterval(interval);
   }, []);
+
+  useVisibilityAwareInterval(fetchStatus, 10000);
 
   const renderContent = () => {
     if (loading && (!data.namespaces || !data.namespaces.length)) {

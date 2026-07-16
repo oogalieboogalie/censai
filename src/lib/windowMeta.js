@@ -19,6 +19,11 @@
 //     persistence: 'workspace',            // 'workspace' | 'local_only'
 //     entitlement: 'windows.helloFactory', // default: windows.<kind>
 //     modeAvailability: { local_desktop, private_server, cloud_saas },
+//     installScope: 'workspace',           // who receives the installed module
+//     runtimeAffinity: 'browser',          // where the module is allowed to execute
+//     requiredCapabilities: [],            // Capability Membrane requirements
+//     sideEffects: [],                     // Data Plane writes/calls this may perform
+//     artifactTypes: [],                   // Artifact Graph node types it emits/reads
 //     lab: { title, props },               // optional window-lab fixture
 //     launcher: { show, order, icon, label, hint }, // optional empty-canvas tile
 //   };
@@ -30,6 +35,38 @@ export const DEFAULT_MODE_AVAILABILITY = Object.freeze({
   private_server: true,
   cloud_saas: true,
 });
+
+export const INSTALL_SCOPES = Object.freeze([
+  'global',
+  'tenant',
+  'workspace',
+  'user',
+  'session',
+  'local_only',
+]);
+
+export const RUNTIME_AFFINITIES = Object.freeze([
+  'browser',
+  'server',
+  'local_desktop',
+  'private_server',
+  'cloud_saas',
+  'sandbox',
+  'worker',
+]);
+
+export const DEFAULT_INSTALL_SCOPE = 'workspace';
+export const DEFAULT_RUNTIME_AFFINITY = 'browser';
+
+function normalizeEnum(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function normalizeStringArray(value) {
+  return Array.isArray(value)
+    ? value.map(item => String(item || '').trim()).filter(Boolean)
+    : [];
+}
 
 /** Derive `XxxWindow` from a kind id like `xxx` or `xxx_yyy`. */
 export function toComponentName(kind) {
@@ -48,6 +85,8 @@ export function normalizeWindowMeta(meta = {}) {
   const size = meta.defaultSize && Number.isFinite(meta.defaultSize.w) && Number.isFinite(meta.defaultSize.h)
     ? { w: meta.defaultSize.w, h: meta.defaultSize.h }
     : { ...FALLBACK_WINDOW_SIZE };
+  const persistence = meta.persistence || 'workspace';
+  const defaultInstallScope = persistence === 'local_only' ? 'local_only' : DEFAULT_INSTALL_SCOPE;
   return Object.freeze({
     kind,
     canvasType: meta.canvasType || kind,
@@ -58,9 +97,14 @@ export function normalizeWindowMeta(meta = {}) {
     title: meta.title || meta.label,
     canPin: meta.canPin !== false,
     canSpawnFromRegion: meta.canSpawnFromRegion !== false,
-    persistence: meta.persistence || 'workspace',
+    persistence,
     entitlement: meta.entitlement || `windows.${kind}`,
     modeAvailability: Object.freeze({ ...DEFAULT_MODE_AVAILABILITY, ...(meta.modeAvailability || {}) }),
+    installScope: normalizeEnum(meta.installScope, INSTALL_SCOPES, defaultInstallScope),
+    runtimeAffinity: normalizeEnum(meta.runtimeAffinity, RUNTIME_AFFINITIES, DEFAULT_RUNTIME_AFFINITY),
+    requiredCapabilities: Object.freeze(normalizeStringArray(meta.requiredCapabilities)),
+    sideEffects: Object.freeze(normalizeStringArray(meta.sideEffects)),
+    artifactTypes: Object.freeze(normalizeStringArray(meta.artifactTypes)),
     lab: meta.lab ? Object.freeze({ ...meta.lab }) : null,
     launcher: meta.launcher ? Object.freeze({ ...meta.launcher }) : null,
   });
@@ -94,6 +138,11 @@ export function deriveRegistryEntry(meta) {
     persistence: m.persistence,
     entitlement: m.entitlement,
     modeAvailability: { ...m.modeAvailability },
+    installScope: m.installScope,
+    runtimeAffinity: m.runtimeAffinity,
+    requiredCapabilities: [...m.requiredCapabilities],
+    sideEffects: [...m.sideEffects],
+    artifactTypes: [...m.artifactTypes],
   };
 }
 

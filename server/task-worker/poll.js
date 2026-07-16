@@ -4,6 +4,20 @@ import {
 } from './shared.js';
 import { claimTask } from './claim.js';
 import { runTask } from './execution.js';
+import { requeueInProgressAgentTasks } from '../memory.js';
+
+let requeuedStuckTasks = false;
+
+async function checkAndRequeueStuckTasks() {
+  if (requeuedStuckTasks) return;
+  try {
+    await requeueInProgressAgentTasks();
+    requeuedStuckTasks = true;
+    log.info('requeued any stuck in_progress agent tasks back to queued status');
+  } catch (err) {
+    log.error('failed to requeue stuck tasks', { error: err.message });
+  }
+}
 
 async function poll() {
   if (state.activeCount >= MAX_CONCURRENT) return;
@@ -15,6 +29,9 @@ async function poll() {
     state.disabledReason = null;
     log.info('task worker activated — database connected');
   }
+  
+  await checkAndRequeueStuckTasks();
+
   try {
     const task = await claimTask();
     if (!task) return;
@@ -37,6 +54,7 @@ export function startTaskWorker() {
   } else {
     state.disabledReason = null;
     log.info('task worker enabled', { pollIntervalMs: POLL_INTERVAL_MS, maxConcurrent: MAX_CONCURRENT });
+    checkAndRequeueStuckTasks().catch(() => {});
   }
   state.running = true;
   setInterval(poll, POLL_INTERVAL_MS);

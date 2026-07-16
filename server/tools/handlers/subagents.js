@@ -6,7 +6,9 @@ import {
   scratchpadWrite,
   scratchpadRead,
   scratchpadClear,
-  createAgentTask
+  createAgentTask,
+  getAgent,
+  getSubAgentById
 } from '../../memory.js';
 import {
   getProject,
@@ -18,6 +20,8 @@ import {
   removeSubAgentFromDisk
 } from '../../workspaces.js';
 import { findReusableSubAgents, formatReuseNotice } from './subagentReuse.js';
+import { REVIEW_SPECIALTY_PROMPTS } from './subagentPrompts.js';
+import { resolveModelDefaults } from './subagentModelDefaults.js';
 
 export async function handleSubagentTool(agentId, name, args, context = {}) {
   switch (name) {
@@ -31,57 +35,8 @@ export async function handleSubagentTool(agentId, name, args, context = {}) {
         if (!project) return `No project named "${args.project}" found. Use open_project first.`;
       }
 
-      // Tier → default model mapping
-      let modelProvider = null;
-      let modelName = null;
-      const tier = args.tier;
-      if (tier === 'nano') {
-        modelProvider = 'ollama';
-        modelName = 'gemma4:31b:cloud';
-      } else if (tier === 'worker') {
-        modelProvider = 'ollama';
-        modelName = 'minimax-m2.5:cloud';
-      } else if (tier === 'reviewer') {
-        modelProvider = 'ollama';
-        modelName = 'gemma4:31b:cloud';
-      }
-
-      // Class → default model mapping (overrides tier if class provided)
       const agentClass = args.class;
-      const REVIEW_SPECIALTY_PROMPTS = {
-        code:            'You are a code quality reviewer. Focus on correctness, readability, test coverage, and adherence to project conventions.',
-        schema:          'You are a database schema reviewer. Check for missing indexes, N+1 risks, migration safety, and data integrity constraints.',
-        infra:           'You are an infrastructure reviewer. Assess Docker configs, environment variables, service dependencies, and deployment safety.',
-        security:        'You are a security reviewer. Hunt for injection risks, auth bypasses, exposed secrets, insecure defaults, and OWASP top-10 issues.',
-        'api-design':    'You are an API design reviewer. Evaluate endpoint naming, HTTP method correctness, error responses, versioning, and contract consistency.',
-        'test-coverage': 'You are a test coverage reviewer. Identify untested code paths, missing edge cases, flaky test patterns, and coverage gaps.',
-      };
-
-      if (agentClass === 'scout') {
-        modelProvider = modelProvider || 'ollama';
-        modelName = modelName || 'gemma4:31b:cloud';
-      } else if (agentClass === 'builder') {
-        modelProvider = modelProvider || 'ollama';
-        modelName = modelName || 'minimax-m2.5:cloud';
-      } else if (agentClass === 'auditor') {
-        modelProvider = modelProvider || 'ollama';
-        modelName = modelName || 'minimax-m2.5:cloud';
-      } else if (agentClass === 'sentry') {
-        modelProvider = modelProvider || 'ollama';
-        modelName = modelName || 'gemma4:31b:cloud';
-      }
-
-      // Explicit model override: "provider/name" or just "name" (defaults to ollama)
-      if (args.model) {
-        const slashIdx = args.model.indexOf('/');
-        if (slashIdx > 0) {
-          modelProvider = args.model.slice(0, slashIdx);
-          modelName = args.model.slice(slashIdx + 1);
-        } else {
-          modelProvider = 'ollama';
-          modelName = args.model;
-        }
-      }
+      const { modelProvider, modelName } = resolveModelDefaults(args.tier, agentClass, args.model);
 
       if (!args.force_new) {
         const existing = await getSubAgents(agentId);
@@ -92,22 +47,48 @@ export async function handleSubagentTool(agentId, name, args, context = {}) {
           projectId: project?.id,
           specialty: args.specialty,
         });
-        if (reusable.length > 0) return formatReuseNotice(reusable);
+        if (reusable.length > 0) {
+          const bestMatch = reusable[0].sub;
+          if (project && bestMatch.project_id !== project.id) {
+            await updateSubAgent(bestMatch.id, { project_id: project.id });
+            try { await mirrorSubAgentToDisk(agentId, { ...bestMatch, project_id: project.id }); } catch {}
+            return `Sub-agent "${bestMatch.name}" (${bestMatch.id}) already exists. Bound to project "${project.name}" (updated).`;
+          }
+          return formatReuseNotice(reusable);
+        }
       }
+
+      // Inherit parent agent's directory/repo scopes and project binding
+      let parentScopes = null;
+      let parentProjectId = null;
+      try {
+        const parentSub = await getSubAgentById(agentId);
+        const parentAgent = parentSub ? null : await getAgent(agentId);
+        parentScopes = parentSub ? parentSub.tool_scopes?.scopes : parentAgent?.tool_scopes?.scopes;
+        parentProjectId = parentSub ? parentSub.project_id : parentAgent?.project_id;
+      } catch (err) {
+        console.warn(`[Subagents] Failed to fetch parent scopes/project for agent ${agentId}:`, err.message);
+      }
+
+      const tool_scopes = {
+        mode: args.tools ? 'custom' : 'default',
+        tools: args.tools || undefined,
+        scopes: parentScopes || undefined,
+      };
 
       let sub = await createSubAgent(agentId, {
         name: args.name,
         role: args.role,
         specialty: args.specialty,
         permission: args.permission || (agentClass === 'builder' ? 'worker' : agentClass === 'scout' || agentClass === 'sentry' ? 'researcher' : agentClass === 'auditor' ? 'reviewer' : 'worker'),
-        projectId: project?.id || null,
+        projectId: project?.id || parentProjectId || null,
         modelProvider,
         modelName,
         preset: args.preset,
         class: agentClass || null,
         reviewSpecialty: args.review_specialty || null,
         systemPromptInject: args.review_specialty ? REVIEW_SPECIALTY_PROMPTS[args.review_specialty] : null,
-        tool_scopes: args.tools ? { mode: 'custom', tools: args.tools } : null,
+        tool_scopes,
       });
 
       // If this is a GitHub project and a worker sub-agent, give them their own branch

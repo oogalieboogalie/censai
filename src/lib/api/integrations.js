@@ -109,3 +109,89 @@ export async function updateSheets(spreadsheet_id, range, value) {
   }
   return await res.json();
 }
+
+/**
+ * List pull requests for a repository.
+ * @param {string} repo
+ * @param {string} state 'open' | 'closed' | 'all'
+ * @returns {Promise<Object[]>}
+ */
+export async function listGithubPulls(repo, state) {
+  const res = await fetch(`/api/github/pulls?repo=${encodeURIComponent(repo)}&state=${encodeURIComponent(state || 'open')}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error || 'Failed to fetch pull requests');
+  }
+  return await res.json();
+}
+
+/**
+ * Fetch detailed PR info (commits, combined status, check runs).
+ * @param {string} repo
+ * @param {number} number
+ * @returns {Promise<Object>}
+ */
+export async function getGithubPullDetails(repo, number) {
+  const res = await fetch(`/api/github/pulls/details?repo=${encodeURIComponent(repo)}&number=${encodeURIComponent(number)}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error || 'Failed to fetch PR details');
+  }
+  return await res.json();
+}
+
+/**
+ * Merge a pull request.
+ * @param {string} repo
+ * @param {number} number
+ * @param {Object} options { commit_title, commit_message, merge_method }
+ * @returns {Promise<Object>}
+ */
+export async function mergeGithubPull(repo, number, { commit_title, commit_message, merge_method } = {}) {
+  const res = await fetch('/api/github/pulls/merge', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo, number, commit_title, commit_message, merge_method }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error || 'Failed to merge pull request');
+  }
+  return await res.json();
+}
+
+/**
+ * List issues for a repository (filtering out PRs).
+ * @param {string} repo
+ * @param {string} state 'open' | 'closed' | 'all'
+ * @returns {Promise<Object[]>}
+ */
+export async function listGithubIssues(repo, state) {
+  const res = await fetch(`/api/github/issues?repo=${encodeURIComponent(repo)}&state=${encodeURIComponent(state || 'all')}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error || 'Failed to fetch issues');
+  }
+  return await res.json();
+}
+
+/**
+ * Add labels to an issue or pull request.
+ * @param {string} repo
+ * @param {number} number
+ * @param {string[]} labels
+ * @returns {Promise<Object>}
+ */
+export async function addGithubLabels(repo, number, labels) {
+  const res = await fetch('/api/github/issues/labels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo, number, labels }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error || 'Failed to add labels');
+  }
+  return await res.json();
+}
+

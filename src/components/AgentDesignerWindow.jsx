@@ -42,14 +42,14 @@ export function AgentDesignerWindow({ win, onUpdate, onCreateAgent, groups = [] 
 
   return (
     <>
-      <WindowTitle icon={<Icon.NewAgent size={14} />} label="Agent Builder" subtitle={agentType === 'core' ? 'core teammate' : 'sub-agent'} />
+      <WindowTitle icon={<Icon.NewAgent size={14} />} label="Agent Designer" subtitle={agentType === 'core' ? 'core teammate' : 'sub-agent'} />
       <div style={shellStyle}>
         <div style={topBarStyle}>
           <div style={brandStyle}>
             <AgentAvatar agent={preview} size={30} ring />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preview.name}</div>
-              <div style={{ fontSize: 11, color: '#94a3b8' }}>{agentType === 'core' ? 'Core agent' : `Sub-agent of ${parentAgent?.name || parentAgentId}`}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preview.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{agentType === 'core' ? 'Core agent' : `Sub-agent of ${parentAgent?.name || parentAgentId}`}</div>
             </div>
           </div>
           <Segmented value={agentType} options={[['core', 'Core'], ['sub', 'Sub-agent']]} onChange={setAgentType} />
@@ -122,7 +122,7 @@ export function AgentDesignerWindow({ win, onUpdate, onCreateAgent, groups = [] 
               </div>
 
               <ColorPicker hue={hue} setHue={setHue} />
-              {status && <div style={{ fontSize: 11, color: status.includes('Failed') || status.includes('unavailable') ? '#fca5a5' : '#a7f3d0', minHeight: 16 }}>{status}</div>}
+              {status && <div style={{ fontSize: 11, color: status.includes('Failed') || status.includes('unavailable') ? 'var(--red)' : 'var(--green)', minHeight: 16 }}>{status}</div>}
             </div>
           </div>
         </div>

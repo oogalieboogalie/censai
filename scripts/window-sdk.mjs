@@ -19,6 +19,8 @@ const paths = {
 const MODULE_TYPE_VALUES = ['window', 'integration', 'agent', 'package'];
 const PERSISTENCE_VALUES = ['workspace', 'local_only'];
 const MODE_AVAILABILITY_KEYS = ['local_desktop', 'private_server', 'cloud_saas'];
+const INSTALL_SCOPE_VALUES = ['global', 'tenant', 'workspace', 'user', 'session', 'local_only'];
+const RUNTIME_AFFINITY_VALUES = ['browser', 'server', 'local_desktop', 'private_server', 'cloud_saas', 'sandbox', 'worker'];
 
 function usage() {
   return `Window SDK
@@ -334,6 +336,18 @@ async function validateWindows({ quiet = false } = {}) {
           if (!MODE_AVAILABILITY_KEYS.includes(key)) errors.push(`${item.kind}: modeAvailability key "${key}" is not one of [${MODE_AVAILABILITY_KEYS.join(', ')}]`);
           if (typeof val !== 'boolean') errors.push(`${item.kind}: modeAvailability.${key} must be a boolean`);
         }
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'installScope') && !INSTALL_SCOPE_VALUES.includes(item.installScope)) {
+      errors.push(`${item.kind}: installScope must be one of [${INSTALL_SCOPE_VALUES.join(', ')}] (got ${JSON.stringify(item.installScope)})`);
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'runtimeAffinity') && !RUNTIME_AFFINITY_VALUES.includes(item.runtimeAffinity)) {
+      errors.push(`${item.kind}: runtimeAffinity must be one of [${RUNTIME_AFFINITY_VALUES.join(', ')}] (got ${JSON.stringify(item.runtimeAffinity)})`);
+    }
+    for (const field of ['requiredCapabilities', 'sideEffects', 'artifactTypes']) {
+      if (!Object.prototype.hasOwnProperty.call(item, field)) continue;
+      if (!Array.isArray(item[field]) || item[field].some(value => typeof value !== 'string' || !value.trim())) {
+        errors.push(`${item.kind}: ${field} must be an array of non-empty strings`);
       }
     }
 

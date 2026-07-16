@@ -5,12 +5,15 @@ import { getAgentById } from '../../lib/agentStore.js';
 export function WindowTitle({ icon, label, accent, subtitle, agent, attachedAgentIds, onDetach, children }) {
   const attached = (attachedAgentIds || []).map(id => getAgentById(id)).filter(Boolean);
   const bgStyle = {
-    background: accent ? `color-mix(in oklab, ${accent} 8%, transparent)` : 'var(--window-title-bg, transparent)',
+    background: accent 
+      ? `color-mix(in oklab, ${accent} 15%, var(--surface-2))` 
+      : 'var(--window-title-bg, color-mix(in oklab, var(--window-accent, var(--accent)) 12%, var(--surface-2)))',
     backdropFilter: 'var(--window-title-backdrop, none)',
     WebkitBackdropFilter: 'var(--window-title-backdrop, none)',
   };
   return (
-    <div style={{ ...bgStyle, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 64px 8px 72px', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)', borderBottom: '1px dashed var(--hairline)', flexShrink: 0, position: 'relative', zIndex: 4, pointerEvents: 'none' }}>
+    <div style={{ ...bgStyle, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 64px 8px 72px', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-soft)', borderBottom: '1px solid color-mix(in oklab, var(--window-accent, var(--accent)) 25%, var(--hairline))', flexShrink: 0, position: 'relative', zIndex: 4, pointerEvents: 'none' }}>
+
       {agent && <div style={{ pointerEvents: 'auto' }}><AgentAvatar agent={agent} size={18} /></div>}
       {icon && !agent && <span style={{ color: accent || 'var(--accent-ink)' }}>{icon}</span>}
       <span style={{ pointerEvents: 'none' }}>{label}</span>

@@ -9,6 +9,7 @@ import {
   requireProductionSecret,
 } from '../secrets.js';
 import { getSessionCookieOptions } from './sessionConfig.js';
+import { createCsrfOriginGuard } from '../middleware/csrfOriginGuard.js';
 
 const log = createLogger('http');
 const APP_ORIGIN = process.env.APP_ORIGIN || 'http://localhost:5173';
@@ -51,8 +52,23 @@ const PostgresStore = class extends session.Store {
 
 export function setupMiddleware(app) {
   app.set('trust proxy', 1);
-  app.use(cors({ origin: APP_ORIGIN, credentials: true }));
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isLocal = origin.startsWith('http://localhost:') ||
+                      origin.startsWith('http://127.0.0.1:') ||
+                      origin.startsWith('tauri://') ||
+                      origin === APP_ORIGIN;
+      if (isLocal) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
+  }));
   app.use(express.json({ limit: '10mb' }));
+  app.use(createCsrfOriginGuard({ appOrigin: APP_ORIGIN }));
 
   // Request logging
   app.use((req, res, next) => {
@@ -71,6 +87,8 @@ export function setupMiddleware(app) {
     || crypto.randomBytes(32).toString('hex');
 
   const store = new PostgresStore(pool);
+
+  app.set('sessionStore', store);
 
   app.use(session({
     store,

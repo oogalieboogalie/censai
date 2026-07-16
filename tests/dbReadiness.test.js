@@ -1,4 +1,7 @@
 import { jest } from '@jest/globals';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 jest.unstable_mockModule('../server/db.js', () => ({
   default: { query: jest.fn(), on: jest.fn() },
@@ -7,6 +10,7 @@ jest.unstable_mockModule('../server/db.js', () => ({
 
 jest.unstable_mockModule('../server/memory/tasks.js', () => ({
   ensureAgentTaskReceiptSchema: jest.fn(async () => {}),
+  requeueInProgressAgentTasks: jest.fn(async () => {}),
 }));
 
 jest.unstable_mockModule('../server/jules-task-sync/index.js', () => ({
@@ -141,5 +145,57 @@ describe('database readiness self-healing', () => {
     await jest.advanceTimersByTimeAsync(5000);
     expect(claimTask).toHaveBeenCalled();
     expect(workerState.disabledReason).toBeNull();
+  });
+});
+
+describe('tenant_id migration (P1-3)', () => {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+  test('docker/027-tenant-id.sql adds tenant_id column to workspaces idempotently', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '027-tenant-id.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    expect(sql).toMatch(/ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS tenant_id TEXT/i);
+  });
+
+  test('docker/027-tenant-id.sql creates an idempotent index on workspaces.tenant_id', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '027-tenant-id.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    expect(sql).toMatch(/CREATE INDEX IF NOT EXISTS\s+\S+\s+ON workspaces\s*\(tenant_id\)/i);
+  });
+});
+
+describe('execution ledger migration', () => {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+  test('docker/026-execution-ledger.sql creates runs, run_steps, run_artifacts', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '026-execution-ledger.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    for (const table of ['runs', 'run_steps', 'run_artifacts']) {
+      const pattern = new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`);
+      expect(sql).toMatch(pattern);
+    }
+  });
+
+  test('run_steps has indexes on (run_id, sequence) and on run_id', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '026-execution-ledger.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    expect(sql).toMatch(/run_steps\s*\(run_id,\s*sequence\)/i);
+    expect(sql).toMatch(/run_steps\s*\(run_id\)/i);
+  });
+
+  test('run_artifacts has an index on run_id', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '026-execution-ledger.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    expect(sql).toMatch(/run_artifacts\s*\(run_id\)/i);
+  });
+
+  test('every ledger table includes a tenant_id column for P1-3 alignment', async () => {
+    const sqlPath = path.resolve(__dirname, '..', 'docker', '026-execution-ledger.sql');
+    const sql = await fs.promises.readFile(sqlPath, 'utf8');
+    for (const table of ['runs', 'run_steps', 'run_artifacts']) {
+      const block = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b[\\s\\S]*?\\);`));
+      expect(block).not.toBeNull();
+      expect(block[0]).toMatch(/\btenant_id\b/);
+    }
   });
 });

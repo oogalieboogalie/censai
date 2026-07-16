@@ -15,10 +15,22 @@ export function useDoc(win, onUpdate, onSpawn, onAssign, bodyRef) {
   const [pendingKind, setPendingKind] = React.useState(null);
   const [activeAnnId, setActiveAnnId] = React.useState(null);
   const [selectionText, setSelectionText] = React.useState('');
-  const [isEditing, setIsEditing] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(win.isEditing || false);
 
   const annotations = win.annotations || [];
-  const text = win.filePath ? (loading ? 'Loading file contents...' : realContent) : (FILE_CONTENTS[win.fileName] || `[no content for ${win.fileName}]`);
+  const text = win.filePath ? (loading ? 'Loading file contents...' : realContent) : realContent;
+
+  React.useEffect(() => {
+    if (win.isEditing !== undefined && win.isEditing !== isEditing) {
+      setIsEditing(win.isEditing);
+    }
+  }, [win.isEditing]);
+
+  React.useEffect(() => {
+    if (!win.filePath) {
+      setRealContent(win.text || win.content || FILE_CONTENTS[win.fileName] || '');
+    }
+  }, [win.filePath, win.text, win.content, win.fileName]);
 
   React.useEffect(() => {
     if (win.filePath) {

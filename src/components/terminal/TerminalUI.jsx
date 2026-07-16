@@ -7,34 +7,33 @@ export function TerminalHeader({ win, cwd, onUpdate, showSettings, setShowSettin
   return (
     <>
       <WindowTitle
-        accent="var(--ps-green)"
+        accent={theme?.cursor || 'var(--ps-green)'}
         icon={<Icon.Terminal size={14} />}
         label={win.title || 'Terminal'}
         subtitle={cwd || 'sandbox'}
         attachedAgentIds={win.attachedAgents}
         onDetach={(id) => onUpdate({ attachedAgents: (win.attachedAgents || []).filter(a => a !== id) })}
-        extra={
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            onPointerDown={(e) => e.stopPropagation()}
-            title="Terminal theme settings"
-            style={{
-              background: showSettings ? 'rgba(96, 165, 250, 0.15)' : 'transparent',
-              border: 'none',
-              borderRadius: 4,
-              padding: 4,
-              cursor: 'pointer',
-              color: showSettings ? '#60a5fa' : '#64748b',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Icon.Gear size={14} />
-          </button>
-        }
-      />
+      >
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="Terminal theme settings"
+          style={{
+            background: showSettings ? 'rgba(96, 165, 250, 0.15)' : 'transparent',
+            border: 'none',
+            borderRadius: 4,
+            padding: 4,
+            cursor: 'pointer',
+            color: showSettings ? '#60a5fa' : '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Icon.Gear size={14} />
+        </button>
+      </WindowTitle>
       {showSettings && (
         <SettingsPanel
           title="Terminal Theme"

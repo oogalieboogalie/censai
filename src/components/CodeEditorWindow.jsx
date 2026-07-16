@@ -1,6 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { Icon } from './Icons.jsx';
 import { DEFAULT_THEME, SettingsPanel } from './windows/WindowThemePanel.jsx';
+import { WindowTitle } from './windows/WindowTitle.jsx';
+import { highlightCode } from '../lib/codeHighlighter.js';
+import { normalizeCodeServerUrl } from '../lib/codeServerUrl.js';
+import { CodeServerIframeView } from './CodeServerIframeView.jsx';
 
 const DEFAULT_CODE = `// Write code here.
 function greet(name) {
@@ -19,9 +23,27 @@ export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
   const [saving, setSaving] = React.useState(false);
   const lines = React.useMemo(() => Array.from({ length: lineCount(code) }, (_, i) => i + 1), [code]);
   const [showSettings, setShowSettings] = useState(false);
+  const preRef = React.useRef(null);
+  const lineNumbersRef = React.useRef(null);
+  const handleScroll = (e) => {
+    if (preRef.current) {
+      preRef.current.scrollTop = e.target.scrollTop;
+      preRef.current.scrollLeft = e.target.scrollLeft;
+    }
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = e.target.scrollTop;
+    }
+  };
+
   const theme = win.editorTheme || { ...DEFAULT_THEME };
   const fileLabel = win.fileName || win.title || 'Code Editor';
-  const sourceLabel = win.filePath ? (win.isGithub ? 'github' : 'local file') : 'plain text';
+  // Iframe mount mode (code-server / self-hosted-iframe) wins over local + GitHub
+  // because it's the "outermost" mode — the editor is replaced wholesale.
+  const codeServerUrl = win.codeServerUrl ? normalizeCodeServerUrl(win.codeServerUrl) : '';
+  const isIframeMode = codeServerUrl.length > 0;
+  const sourceLabel = isIframeMode
+    ? 'code-server'
+    : (win.filePath ? (win.isGithub ? 'github' : 'local file') : 'plain text');
 
   const handleThemeChange = useCallback((newTheme) => onUpdate({ editorTheme: newTheme }), [onUpdate]);
 
@@ -98,27 +120,17 @@ export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
 
   return (
     <>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '10px 36px 8px 28px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--ink-soft)',
-        borderBottom: '1px dashed var(--hairline)',
-        background: 'color-mix(in oklab, var(--ps-blue) 8%, transparent)',
-        flexShrink: 0,
-      }}>
-        <span style={{ color: 'var(--ps-blue)', display: 'flex' }}><Icon.Code size={14} /></span>
-        <span>{fileLabel}</span>
-        <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--ink-faint)', fontWeight: 400 }}>{loading ? 'loading...' : sourceLabel}</span>
-        {win.language && <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--ink-faint)', fontWeight: 400 }}>· {win.language}</span>}
+      <WindowTitle
+        accent={theme.cursor || theme.blue || 'var(--ps-blue)'}
+        icon={<Icon.Code size={14} />}
+        label={fileLabel}
+        subtitle={(loading ? 'loading...' : sourceLabel) + (win.language ? ` · ${win.language}` : '')}
+        attachedAgentIds={win.attachedAgents}
+        onDetach={(id) => onUpdate?.({ attachedAgents: (win.attachedAgents || []).filter(a => a !== id) })}
+      >
         {win.isGithub && <span style={{ fontSize: 9, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--ink)' }}>{win.githubRepo}</span>}
-        <div style={{ flex: 1 }} />
-        {win.filePath && !win.isGithub && (
+        {isIframeMode && <span data-code-server-url-badge style={{ fontFamily: 'var(--font-mono)', fontSize: 9, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--ink)' }} title={codeServerUrl}>{codeServerUrl}</span>}
+        {win.filePath && !win.isGithub && !isIframeMode && (
           <button
             onClick={(e) => { e.stopPropagation(); saveFile(); }}
             disabled={saving}
@@ -148,15 +160,17 @@ export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
         >
           <Icon.Gear size={14} />
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); previewAsHtml(); }}
-          title="Open contents in HTML Preview"
-          style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent)', borderRadius: 7, padding: '4px 7px', textTransform: 'none', letterSpacing: 0, fontSize: 11, fontWeight: 700 }}
-        >
-          <Icon.Eye size={12} />
-          Preview
-        </button>
-      </div>
+        {!isIframeMode && (
+          <button
+            onClick={(e) => { e.stopPropagation(); previewAsHtml(); }}
+            title="Open contents in HTML Preview"
+            style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent)', borderRadius: 7, padding: '4px 7px', textTransform: 'none', letterSpacing: 0, fontSize: 11, fontWeight: 700 }}
+          >
+            <Icon.Eye size={12} />
+            Preview
+          </button>
+        )}
+      </WindowTitle>
 
       {showSettings && (
         <SettingsPanel
@@ -167,33 +181,86 @@ export function CodeEditorWindow({ win, onUpdate, onSpawn }) {
         />
       )}
 
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '48px minmax(0, 1fr)', background: theme.background, color: theme.foreground, fontFamily: 'var(--font-mono)', fontSize: theme.fontSize || 13 }}>
-        <div aria-hidden="true" style={{ padding: '12px 8px', textAlign: 'right', color: theme.selectionBackground, background: 'rgba(0,0,0,0.2)', borderRight: `1px solid ${theme.black}`, overflow: 'hidden', lineHeight: 1.55, userSelect: 'none' }}>
+      {isIframeMode ? (
+        <CodeServerIframeView url={codeServerUrl} theme={theme} winOpacity={win.opacity} />
+      ) : (
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(48px, auto) minmax(0, 1fr)', background: win.opacity !== undefined ? 'transparent' : theme.background, color: theme.foreground, fontFamily: 'var(--font-mono)', fontSize: theme.fontSize || 13 }}>
+        <div
+          ref={lineNumbersRef}
+          aria-hidden="true"
+          style={{
+            padding: '12px 8px',
+            textAlign: 'right',
+            color: theme.selectionBackground,
+            background: win.opacity !== undefined ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)',
+            borderRight: `1px solid ${theme.black}`,
+            overflow: 'hidden',
+            lineHeight: 1.55,
+            userSelect: 'none'
+          }}
+        >
           {lines.map(n => <div key={n}>{n}</div>)}
         </div>
-        <textarea
-          value={code}
-          onChange={(e) => updateCode(e.target.value)}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          style={{
-            width: '100%',
-            height: '100%',
-            resize: 'none',
-            border: 0,
-            outline: 'none',
-            padding: 12,
-            background: 'transparent',
-            color: theme.foreground,
-            font: 'inherit',
-            lineHeight: 1.55,
-            tabSize: 2,
-            whiteSpace: 'pre',
-            overflow: 'auto',
-          }}
-        />
+        <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 0 }}>
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              margin: 0,
+              padding: 12,
+              border: 0,
+              background: 'transparent',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              lineHeight: 1.55,
+              tabSize: 2,
+              whiteSpace: 'pre',
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              color: theme.foreground,
+              zIndex: 1,
+            }}
+            dangerouslySetInnerHTML={{ __html: highlightCode(code, theme) + (code.endsWith('\n') ? ' ' : '') }}
+          />
+          <textarea
+            value={code}
+            onChange={(e) => updateCode(e.target.value)}
+            onScroll={handleScroll}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+              resize: 'none',
+              border: 0,
+              outline: 'none',
+              padding: 12,
+              background: 'transparent',
+              color: 'transparent',
+              caretColor: theme.cursor || theme.foreground || 'var(--ink)',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              lineHeight: 1.55,
+              tabSize: 2,
+              whiteSpace: 'pre',
+              overflow: 'auto',
+              zIndex: 2,
+            }}
+          />
+        </div>
       </div>
+      )}
     </>
   );
 }
