@@ -1,101 +1,136 @@
-# 🌌 Censai
+# Censai
 
-**The infinite canvas where your team and your AI agents work side by side — self-hosted, local-first, yours.**
-
-<div align="left">
+**A self-hosted multiplayer canvas where people and persistent AI agents work in the same space.**
 
 [![License: BUSL 1.1](https://img.shields.io/badge/License-BUSL%201.1-orange.svg)](LICENSE)
 [![CI](https://github.com/oogalieboogalie/censai/actions/workflows/ci.yml/badge.svg)](https://github.com/oogalieboogalie/censai/actions/workflows/ci.yml)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-blue.svg?logo=docker&logoColor=white)](https://www.docker.com)
 [![GitHub stars](https://img.shields.io/github/stars/oogalieboogalie/censai?style=social)](https://github.com/oogalieboogalie/censai/stargazers)
 
-</div>
-
-Censai is named after the first agent its creator ever built — the one that taught him enough to start a company. The product carries the same idea: agents that persist, remember, and get better at working with you.
-
----
-
-## The Product
-
-Censai turns multi-agent work into a visual sandbox instead of a chat log. Drag windows across an infinite canvas, draw connections, group workers into stations, and watch your agents execute code, browse files, and write documents in real time.
-
-It ships as a blank canvas — no pre-seeded branding, no opinionated structure. You design the personalities, connect the tools, and set the parameters.
+Censai replaces the stack of disconnected chat tabs, terminals, documents, task boards, and agent
+dashboards with one shared infinite canvas. A teammate can move a document beside your terminal. An
+agent can contribute to that document. Everyone stays oriented because the work, the people, and the
+agents remain visible together.
 
 ![Censai Canvas Preview](public/preview.png)
 
----
+## The core idea
 
-## Key Features
+Most AI products put one person in front of one chat box. Censai is built around a different unit:
+the **shared workspace**.
 
-### 🧠 Infinite Canvas UI
-- **Visual sandbox**: drag, zoom, pan, and rubber-band select across a grid canvas.
-- **Node-link architecture**: physically draw links to attach agents to tools or chat groups.
-- **Smart container regions**: color-coded groups bind sets of agents together, with one-click tree-layout cleanup.
+- **People share a canvas**, not a screen recording. Presence, window positions, and durable canvas
+  changes belong to the workspace.
+- **Agents occupy the workspace too.** They can inspect authorized context, use equipped tools, run
+  in the background, and—after the required approval—write into visible work surfaces.
+- **The canvas preserves context.** Documents, terminals, tasks, files, chats, browsers, agents, and
+  their relationships stay spatially arranged instead of disappearing into a transcript.
+- **You own the runtime.** Run it on your workstation, home server, or private server with Docker.
 
-### 🕵️ Persistent Agents
-- **Agent designer**: custom prompts, hues, glyphs, and per-agent tool registries.
-- **Multi-provider LLM engine**: point agents at local models (Ollama) or cloud APIs (Gemini, OpenRouter, Moonshot, any OpenAI-compatible endpoint).
-- **Real memory**: PostgreSQL-backed weighted memories, AES-encrypted private journals, a knowledge graph, and semantic recall via Qdrant (optional, degrades gracefully).
-- **A family, not a fleet**: agents have emotional state, watch over each other, and heal each other's memory when context fills.
+## Multiplayer collaboration
 
-### 🛠️ Built-In Workspace Windows
-38 window types, registered through a single manifest: code editor with live preview, local & GitHub file browsers, task scheduler, todos, docs with annotations, terminal, image generation, a music player, and more. Scaffold your own with `npm run window:new`.
+The multiplayer beta proves the important vertical slice:
 
-### ⚙️ Background Workers
-An agent task queue and a cron scheduler run server-side — agents keep working when the canvas is closed.
+1. An owner invites a separately registered workspace member.
+2. Both people see truthful live presence in the same workspace.
+3. Window movement streams to the other client as a low-latency preview.
+4. Durable changes are revision-checked, saved to PostgreSQL, and broadcast to every connected member.
+5. An equipped agent can discover a writable canvas window, request approval, append content, and
+   publish the committed result to both people.
+6. Reconnecting restores the authoritative revision, while non-members are denied.
 
----
+The current beta does **not** yet provide character-by-character collaborative text editing. Text is
+shared after a durable workspace commit, so a teammate sees the result after the editor pauses rather
+than on every keystroke. See [COLLABORATION.md](COLLABORATION.md) for the exact boundary and the path
+to CRDT-backed live co-editing.
 
-## ⚡ Quick Start
+> **Release status:** the multiplayer vertical slice is implemented and under review in the current
+> beta line. It is not part of the latest public image until that source and its scrubbed public export
+> both pass review and merge. The release receipt identifies the exact commit in every published image.
 
-### 1. Clone the repo
+## What else is inside
+
+### Infinite canvas
+
+- Pan, zoom, draw, group, resize, and arrange work across a persistent spatial surface.
+- Connect agents to windows and organize related work into visual stations.
+- Use 50+ manifest-registered window types, including documents, code, terminals, files, tasks,
+  schedules, chats, browsers, images, media, agent design, and operational tools.
+- Scaffold a new window with `npm run window:new` and validate it with `npm run window:validate`.
+
+### Persistent agents
+
+- Create agents with their own identity, role, model route, tools, and workspace-scoped permissions.
+- Store weighted memories, knowledge-graph facts, and AES-256-GCM encrypted private journals.
+- Run with Ollama locally or use OpenAI-compatible, OpenRouter, Gemini, and other configured providers.
+- Queue background tasks and schedules that continue after the browser closes.
+- Give different agents different tools instead of exposing every capability to every model.
+
+### Self-hosted control
+
+- PostgreSQL is the durable authority for workspace and agent state.
+- Qdrant provides optional semantic recall and degrades gracefully when unavailable.
+- Risky execution capabilities can be kept behind the optional runner boundary.
+- Public releases pass tests, production build, window validation, secret scanning, dependency audit,
+  malicious-code tripwires, and CodeQL before an immutable image is published.
+
+## Quick start
+
 ```bash
 git clone https://github.com/oogalieboogalie/censai.git
 cd censai
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
 ```
 
-### 2. Pull local models (optional)
-With [Ollama](https://ollama.com/) installed, pull a tool-calling chat model and the default embedding model:
+Open <http://localhost:3002>.
+
+The GHCR override pulls the newest validated public image. To build the checked-out source instead:
+
+```bash
+docker compose up -d --build
+```
+
+For local models, install [Ollama](https://ollama.com/) and pull a tool-calling model plus the default
+embedding model:
+
 ```bash
 ollama pull qwen3-coder:latest
 ollama pull nomic-embed-text
 ```
 
-### 3. Create your local configuration
-```bash
-cp .env.example .env
-```
+Read [SELF_HOSTING_GUIDE.md](SELF_HOSTING_GUIDE.md) before exposing a shared installation to other
+people or the internet. The default Compose stack is intended for a trusted local machine.
 
-### 4. Start the stack
-```bash
-docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
-```
-Open **http://localhost:3002** and start building.
+## Releases you can reproduce
 
-That command pulls the validated public image from GitHub Container Registry. To build the
-same release from its published source instead, run `docker compose up -d --build`.
+Every reviewed merge to public `main` must pass the public CI and security gates. A successful merge
+publishes:
 
-Every merge to `main` that passes CI creates an immutable `selfhost-<date>-<commit>` GitHub
-release and matching GHCR image. `latest` follows the newest validated release; the dated tag
-is the reproducible choice for production installs.
+- an immutable `selfhost-<date>-<commit>` GitHub release;
+- a matching `ghcr.io/oogalieboogalie/censai:<release-tag>` container;
+- a release receipt tying the source commit to the image.
 
----
+Use the immutable tag for a repeatable installation. `latest` is only a convenience pointer.
 
-## Configuration
+## Documentation
 
-Edit `.env` to add any cloud LLM or external-integration keys you choose to use. Local Ollama
-does not require a paid API key.
+- [Collaboration model and live-text roadmap](COLLABORATION.md)
+- [Self-hosting guide](SELF_HOSTING_GUIDE.md)
+- [Architecture](ARCHITECTURE.md)
+- [Window integration specification](docs/WINDOW_INTEGRATION_SPEC.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
-See [SELF_HOSTING_GUIDE.md](SELF_HOSTING_GUIDE.md) for the full walkthrough and [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together. Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+## Project status
 
----
+Censai is an active, founder-led beta. The canvas, agents, memory, tools, self-hosting, and release
+pipeline are real; the multiplayer vertical slice is implemented in the beta line; character-level
+co-editing and multi-node collaboration fan-out remain engineering work. Claims in this README are
+kept narrower than the product ambition on purpose.
 
-## ☁️ Censai Cloud
+## License
 
-A managed cloud version — hosted, with teams and built-in AI credits — is in the works. Self-hosting stays free.
-
----
-
-## 📜 License
-
-[Business Source License 1.1](LICENSE). In plain English: run it locally or self-host it inside your organization for free, including for business use. What you can't do is offer Censai itself to third parties as a hosted or managed service. Each release converts to MIT four years after publication (this one: June 10, 2030).
+[Business Source License 1.1](LICENSE). You may run Censai locally or self-host it inside your
+organization, including for business use. You may not offer Censai itself to third parties as a
+hosted or managed service. Each release converts to MIT four years after publication.
