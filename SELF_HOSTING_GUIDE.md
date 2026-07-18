@@ -57,6 +57,18 @@ the public internet to connect:
 4. Leave the runner profile disabled unless you explicitly need agent code execution and have
    reviewed its Docker-socket access.
 
+### Multiplayer beta status
+
+The current beta line adds workspace invitations, authenticated presence, live window movement, and
+durable human/agent canvas commits. It is not included in a public image until the beta source and
+its scrubbed export both pass review and merge. Check the release notes and immutable image tag
+instead of assuming `latest` contains an unreleased beta capability.
+
+The collaboration hub currently lives in one application process. Keep a shared beta deployment on
+one app replica; horizontal replicas require a shared pub/sub backplane for presence and WebSocket
+events. Character-level text co-editing is also not implemented yet. See
+[COLLABORATION.md](COLLABORATION.md) for the current synchronization contract and roadmap.
+
 ## Update
 
 ```bash
